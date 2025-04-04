@@ -447,4 +447,25 @@ h1 {
     font-size: 18px;
     margin-bottom: 15px;
     color: #3a3a3c;
+}
+
+#mode-toggle {
+    font-size: 20px;
+    margin-right: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+#mode-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.mode-text {
+    font-size: 14px;
+    color: #787c7e;
+    margin-bottom: 15px;
+    font-style: italic;
 } 

@@ -1,10 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Game state
-    let wordOfTheDay = getRandomWord();
+    let gameMode = "daily"; // Default mode is daily challenge
+    let wordOfTheDay = getDailyWord();
     let currentRow = 0;
     let currentTile = 0;
     let isGameOver = false;
     let gameStats = loadStats();
+    
+    // Check if today's daily challenge has been completed
+    const dailyCompleted = checkDailyCompleted();
+    if (dailyCompleted) {
+        gameMode = "random"; // Switch to random mode if daily already completed
+        wordOfTheDay = getRandomWord();
+    }
     
     // Create the game board
     createBoard();
@@ -48,6 +56,68 @@ document.addEventListener('DOMContentLoaded', () => {
         helpButton.addEventListener('click', () => {
             displayHelp();
         });
+        
+        // Add mode toggle button
+        createModeToggle();
+    }
+    
+    // Create a toggle button for switching between daily and random modes
+    function createModeToggle() {
+        // Check if the header-right already has the toggle button
+        const headerRight = document.querySelector('.header-right');
+        if (headerRight.querySelector('#mode-toggle')) {
+            return;
+        }
+        
+        const modeToggle = document.createElement('button');
+        modeToggle.id = 'mode-toggle';
+        modeToggle.classList.add('icon-button');
+        modeToggle.innerHTML = gameMode === "daily" ? "📅" : "🎲";
+        modeToggle.title = gameMode === "daily" ? "Daily Challenge" : "Random Play";
+        
+        // Add event listener to toggle game mode
+        modeToggle.addEventListener('click', () => {
+            if (!isGameOver) {
+                // If game in progress, confirm before switching
+                if (currentRow > 0) {
+                    if (!confirm("Switching modes will reset your current game. Continue?")) {
+                        return;
+                    }
+                }
+            }
+            
+            // Toggle the game mode
+            if (gameMode === "daily") {
+                // Check if daily already completed
+                if (checkDailyCompleted()) {
+                    showMessage("You've already completed today's challenge!");
+                } else {
+                    // Switch to random mode
+                    gameMode = "random";
+                    modeToggle.innerHTML = "🎲";
+                    modeToggle.title = "Random Play";
+                    wordOfTheDay = getRandomWord();
+                    restartGame();
+                    showMessage("Switched to random play mode");
+                }
+            } else {
+                // Check if daily already completed
+                if (checkDailyCompleted()) {
+                    showMessage("You've already completed today's challenge!");
+                } else {
+                    // Switch to daily mode
+                    gameMode = "daily";
+                    modeToggle.innerHTML = "📅";
+                    modeToggle.title = "Daily Challenge";
+                    wordOfTheDay = getDailyWord();
+                    restartGame();
+                    showMessage("Switched to daily challenge mode");
+                }
+            }
+        });
+        
+        // Add to header
+        headerRight.insertBefore(modeToggle, headerRight.firstChild);
     }
     
     // Set up the on-screen keyboard and physical keyboard
@@ -141,6 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
             gameStats.currentStreak++;
             gameStats.maxStreak = Math.max(gameStats.maxStreak, gameStats.currentStreak);
             gameStats.guesses[currentRow]++;
+            
+            // If in daily mode, mark as completed
+            if (gameMode === "daily") {
+                markDailyCompleted();
+            }
+            
             saveStats(gameStats);
             
             setTimeout(() => {
@@ -386,16 +462,38 @@ document.addEventListener('DOMContentLoaded', () => {
             wordReveal.classList.add('word-reveal');
             wordReveal.textContent = `The word was: ${wordOfTheDay}`;
             
+            const modeText = document.createElement('p');
+            modeText.classList.add('mode-text');
+            modeText.textContent = gameMode === "daily" ? "Daily Challenge" : "Random Play";
+            
             const replayButton = document.createElement('button');
             replayButton.classList.add('replay-button');
             replayButton.textContent = 'Play Again';
             replayButton.addEventListener('click', () => {
+                // If we're in daily mode and it's completed, switch to random mode
+                if (gameMode === "daily" && checkDailyCompleted()) {
+                    gameMode = "random";
+                    const modeToggle = document.getElementById('mode-toggle');
+                    if (modeToggle) {
+                        modeToggle.innerHTML = "🎲";
+                        modeToggle.title = "Random Play";
+                    }
+                }
+                
+                // Generate a new word based on the current mode
+                if (gameMode === "daily") {
+                    wordOfTheDay = getDailyWord();
+                } else {
+                    wordOfTheDay = getRandomWord();
+                }
+                
                 restartGame();
                 document.getElementById('stats-modal').style.display = 'none';
             });
             
             resultContainer.appendChild(resultText);
             resultContainer.appendChild(wordReveal);
+            resultContainer.appendChild(modeText);
             resultContainer.appendChild(replayButton);
             
             statsContainer.appendChild(resultContainer);
@@ -488,10 +586,39 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('help-modal').style.display = 'block';
     }
 
+    // Get a deterministic daily word based on the current date
+    function getDailyWord() {
+        const now = new Date();
+        const start = new Date(2022, 0, 1); // Start from Jan 1, 2022
+        const msInDay = 86400000;
+        const daysSinceStart = Math.floor((now - start) / msInDay);
+        
+        // Get a word based on the day number (ensuring it cycles through the full word list)
+        const wordIndex = daysSinceStart % SOLUTION_WORDS.length;
+        return SOLUTION_WORDS[wordIndex];
+    }
+    
+    // Check if today's daily challenge has been completed
+    function checkDailyCompleted() {
+        const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        return completedDailies.includes(today);
+    }
+    
+    // Mark today's daily challenge as completed
+    function markDailyCompleted() {
+        const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        if (!completedDailies.includes(today)) {
+            completedDailies.push(today);
+            localStorage.setItem('completedDailies', JSON.stringify(completedDailies));
+        }
+    }
+    
     // Restart the game
     function restartGame() {
         // Reset game state
-        wordOfTheDay = getRandomWord();
         currentRow = 0;
         currentTile = 0;
         isGameOver = false;
