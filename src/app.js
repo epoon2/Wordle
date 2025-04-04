@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 showMessage("You win!");
                 displayStats();
+                displayReplayButton();
             }, 1500);
             
             isGameOver = true;
@@ -156,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 showMessage(`Game over! The word was ${wordOfTheDay}`);
                 displayStats();
+                displayReplayButton();
             }, 1500);
             
             isGameOver = true;
@@ -454,5 +456,59 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Show the modal
         document.getElementById('help-modal').style.display = 'block';
+    }
+
+    // Display a replay button
+    function displayReplayButton() {
+        // Check if replay button already exists
+        if (document.getElementById('replay-button')) {
+            document.getElementById('replay-button').style.display = 'block';
+            return;
+        }
+        
+        const replayButton = document.createElement('button');
+        replayButton.id = 'replay-button';
+        replayButton.textContent = 'Play Again';
+        replayButton.classList.add('replay-button');
+        
+        replayButton.addEventListener('click', () => {
+            restartGame();
+        });
+        
+        document.body.appendChild(replayButton);
+    }
+    
+    // Restart the game
+    function restartGame() {
+        // Reset game state
+        wordOfTheDay = getRandomWord();
+        currentRow = 0;
+        currentTile = 0;
+        isGameOver = false;
+        
+        // Clear the board
+        for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                tile.textContent = '';
+                tile.classList.remove('tile-filled', 'correct', 'present', 'absent');
+                tile.dataset.state = 'empty';
+                tile.dataset.letter = '';
+            }
+        }
+        
+        // Reset keyboard
+        const keys = document.querySelectorAll('#keyboard-container button');
+        keys.forEach(key => {
+            key.classList.remove('correct', 'present', 'absent');
+        });
+        
+        // Hide replay button
+        if (document.getElementById('replay-button')) {
+            document.getElementById('replay-button').style.display = 'none';
+        }
+        
+        // Clear messages
+        showMessage('');
     }
 }); 
