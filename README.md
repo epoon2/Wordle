@@ -27,7 +27,7 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Wordle.git
+git clone https://github.com/epoon2/Wordle.git
 cd Wordle
 
 # No build process required - open index.html directly
@@ -43,7 +43,7 @@ This game can be easily deployed to GitHub Pages:
 4. Select the root folder
 5. Click Save
 
-Your game will be available at `https://yourusername.github.io/Wordle/`.
+Your game will be available at `https://epoon2.github.io/Wordle/`.
 
 ## Game Rules
 
