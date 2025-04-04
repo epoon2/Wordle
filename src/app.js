@@ -63,9 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Create a toggle button for switching between daily and random modes
     function createModeToggle() {
-        // Check if the header-right already has the toggle button
-        const headerRight = document.querySelector('.header-right');
-        if (headerRight.querySelector('#mode-toggle')) {
+        // Check if the menu-right already has the toggle button
+        const menuRight = document.querySelector('.menu-right');
+        if (menuRight.querySelector('#mode-toggle')) {
             return;
         }
         
@@ -116,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Add to header
-        headerRight.insertBefore(modeToggle, headerRight.firstChild);
+        // Add to menu
+        menuRight.insertBefore(modeToggle, menuRight.firstChild);
     }
     
     // Set up the on-screen keyboard and physical keyboard
