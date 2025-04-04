@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTile = 0;
         
         // Check if the game is over
-        if (guess === wordOfTheDay) {
+        if (guess.toUpperCase() === wordOfTheDay) {
             gameStats.gamesWon++;
             gameStats.currentStreak++;
             gameStats.maxStreak = Math.max(gameStats.maxStreak, gameStats.currentStreak);
@@ -169,11 +169,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check the guess against the word of the day
     function checkGuess(guess) {
         const wordCopy = wordOfTheDay.split('');
+        const guessUpper = guess.toUpperCase();
         const results = Array(5).fill('absent');
         
         // First pass: check for correct letters
         for (let i = 0; i < 5; i++) {
-            if (guess[i] === wordOfTheDay[i]) {
+            if (guessUpper[i] === wordOfTheDay[i]) {
                 results[i] = 'correct';
                 wordCopy[i] = null; // Mark as used
             }
@@ -182,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Second pass: check for present letters
         for (let i = 0; i < 5; i++) {
             if (results[i] !== 'correct') {
-                const letterIndex = wordCopy.indexOf(guess[i]);
+                const letterIndex = wordCopy.indexOf(guessUpper[i]);
                 if (letterIndex !== -1) {
                     results[i] = 'present';
                     wordCopy[letterIndex] = null; // Mark as used
