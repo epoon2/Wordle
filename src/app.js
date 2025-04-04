@@ -1,7 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Get mode from URL parameter if available
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    
     // Game state
-    let gameMode = "daily"; // Default mode is daily challenge
-    let wordOfTheDay = getDailyWord();
+    let gameMode = modeParam === 'random' ? 'random' : 'daily'; // Default mode is daily challenge unless specified
+    let wordOfTheDay;
     let currentRow = 0;
     let currentTile = 0;
     let isGameOver = false;
@@ -9,17 +13,46 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check if today's daily challenge has been completed
     const dailyCompleted = checkDailyCompleted();
-    if (dailyCompleted) {
-        gameMode = "random"; // Switch to random mode if daily already completed
-        wordOfTheDay = getRandomWord();
+    if (dailyCompleted && gameMode === 'daily') {
+        const savedState = getDailyState();
+        showMessage("You've already completed today's challenge!");
+        isGameOver = true;
+        
+        // Create the game board first (we'll restore state after)
+        createBoard();
+        setupKeyboard();
+        setupButtons();
+        
+        // Set the word of the day
+        wordOfTheDay = getDailyWord();
+        
+        // Restore the previously played game state
+        if (savedState) {
+            restoreDailyState(savedState);
+            // Show the stats modal after a short delay
+            setTimeout(() => {
+                displayStats();
+            }, 800);
+        } else {
+            // If no saved state (unlikely), switch to random mode
+            gameMode = "random";
+            wordOfTheDay = getRandomWord();
+        }
+    } else {
+        // Set the word based on the game mode
+        if (gameMode === 'daily') {
+            wordOfTheDay = getDailyWord();
+        } else {
+            wordOfTheDay = getRandomWord();
+        }
+        
+        // Create the game board
+        createBoard();
+        // Set up the keyboard listeners
+        setupKeyboard();
+        // Set up UI button listeners
+        setupButtons();
     }
-    
-    // Create the game board
-    createBoard();
-    // Set up the keyboard listeners
-    setupKeyboard();
-    // Set up UI button listeners
-    setupButtons();
     
     // Creates the game board tiles
     function createBoard() {
@@ -63,9 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Create a toggle button for switching between daily and random modes
     function createModeToggle() {
-        // Check if the header-right already has the toggle button
-        const headerRight = document.querySelector('.header-right');
-        if (headerRight.querySelector('#mode-toggle')) {
+        // Check if the menu-right already has the toggle button
+        const menuRight = document.querySelector('.menu-right');
+        if (menuRight.querySelector('#mode-toggle')) {
             return;
         }
         
@@ -88,24 +121,39 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Toggle the game mode
             if (gameMode === "daily") {
-                // Check if daily already completed
-                if (checkDailyCompleted()) {
-                    showMessage("You've already completed today's challenge!");
-                } else {
-                    // Switch to random mode
-                    gameMode = "random";
-                    modeToggle.innerHTML = "🎲";
-                    modeToggle.title = "Random Play";
-                    wordOfTheDay = getRandomWord();
-                    restartGame();
-                    showMessage("Switched to random play mode");
-                }
+                // Switch to random mode
+                gameMode = "random";
+                modeToggle.innerHTML = "🎲";
+                modeToggle.title = "Random Play";
+                wordOfTheDay = getRandomWord();
+                restartGame();
+                showMessage("Switched to random play mode");
             } else {
                 // Check if daily already completed
                 if (checkDailyCompleted()) {
-                    showMessage("You've already completed today's challenge!");
+                    // Switch to daily mode but show the previous state
+                    gameMode = "daily";
+                    modeToggle.innerHTML = "📅";
+                    modeToggle.title = "Daily Challenge";
+                    
+                    // Show message and update the game board with previous attempt
+                    showMessage("Showing your completed daily challenge");
+                    
+                    // Get saved state and restore it
+                    const savedState = getDailyState();
+                    if (savedState) {
+                        wordOfTheDay = getDailyWord();
+                        restartGame(); // Clear the board first
+                        restoreDailyState(savedState);
+                        isGameOver = true;
+                        
+                        // Show the stats modal after a short delay
+                        setTimeout(() => {
+                            displayStats();
+                        }, 800);
+                    }
                 } else {
-                    // Switch to daily mode
+                    // Switch to daily mode with new game
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
                     modeToggle.title = "Daily Challenge";
@@ -116,8 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Add to header
-        headerRight.insertBefore(modeToggle, headerRight.firstChild);
+        // Add to menu
+        menuRight.insertBefore(modeToggle, menuRight.firstChild);
     }
     
     // Set up the on-screen keyboard and physical keyboard
@@ -212,9 +260,10 @@ document.addEventListener('DOMContentLoaded', () => {
             gameStats.maxStreak = Math.max(gameStats.maxStreak, gameStats.currentStreak);
             gameStats.guesses[currentRow]++;
             
-            // If in daily mode, mark as completed
+            // If in daily mode, mark as completed and save the state
             if (gameMode === "daily") {
                 markDailyCompleted();
+                saveDailyState();
             }
             
             saveStats(gameStats);
@@ -228,6 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentRow >= 5) { // Check if this is the last row (index 5)
             gameStats.currentStreak = 0;
             saveStats(gameStats);
+            
+            // If in daily mode, still save the loss state
+            if (gameMode === "daily") {
+                saveDailyState();
+            }
             
             setTimeout(() => {
                 showMessage(`Game over!`);
@@ -642,5 +696,86 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Clear messages
         showMessage('');
+    }
+
+    // Save the state of the daily challenge
+    function saveDailyState() {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Collect all the guesses
+        const guesses = [];
+        for (let i = 0; i <= currentRow; i++) {
+            let rowGuess = '';
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                rowGuess += tile.dataset.letter || '';
+            }
+            if (rowGuess.length === 5) {
+                guesses.push(rowGuess);
+            }
+        }
+        
+        // Save the board state and results
+        const state = {
+            guesses: guesses,
+            date: today,
+            word: wordOfTheDay,
+            won: wordOfTheDay === guesses[guesses.length - 1]
+        };
+        
+        localStorage.setItem('dailyState', JSON.stringify(state));
+    }
+    
+    // Get the saved daily state
+    function getDailyState() {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
+        
+        // Check if the saved state is from today
+        if (savedState.date === today) {
+            return savedState;
+        }
+        
+        return null;
+    }
+    
+    // Restore the state of a previously played daily challenge
+    function restoreDailyState(state) {
+        // First clear the board (just to be safe)
+        for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                tile.textContent = '';
+                tile.classList.remove('tile-filled', 'correct', 'present', 'absent');
+                tile.dataset.state = 'empty';
+                tile.dataset.letter = '';
+            }
+        }
+        
+        // Reset keyboard
+        const keys = document.querySelectorAll('#keyboard-container button');
+        keys.forEach(key => {
+            key.classList.remove('correct', 'present', 'absent');
+        });
+        
+        // Replay the guesses
+        for (let i = 0; i < state.guesses.length; i++) {
+            const guess = state.guesses[i];
+            
+            // Fill in the row
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                tile.textContent = guess[j];
+                tile.classList.add('tile-filled');
+                tile.dataset.letter = guess[j];
+            }
+            
+            // Check the guess to apply coloring
+            checkGuess(guess, i);
+        }
+        
+        // Update the currentRow
+        currentRow = state.guesses.length;
+        currentTile = 0;
     }
 }); 

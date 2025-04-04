@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Game</title>
+    <link rel="stylesheet" href="src/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Clear+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        // Check if the user came directly to game.html (not from index.html)
+        if (!document.referrer.includes('index.html')) {
+            // Check if they've completed the daily challenge and no mode was specified
+            const urlParams = new URLSearchParams(window.location.search);
+            const modeParam = urlParams.get('mode');
+            
+            // Only check for daily completion if no explicit mode was set
+            if (!modeParam) {
+                const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                
+                // If they completed today's challenge and came directly to game.html, redirect to homepage
+                if (completedDailies.includes(today)) {
+                    window.location.href = 'index.html';
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <div class="menu-left">
+                <button id="help-button" class="icon-button">?</button>
+                <a href="index.html" class="icon-button">🏠</a>
+            </div>
+            <h1>WORDLE</h1>
+            <div class="menu-right">
+                <button id="stats-button" class="icon-button">📊</button>
+            </div>
+        </header>
+
+        <div id="board-container">
+            <div id="board"></div>
+        </div>
+
+        <div id="keyboard-container">
+            <div class="keyboard-row">
+                <button data-key="q">q</button>
+                <button data-key="w">w</button>
+                <button data-key="e">e</button>
+                <button data-key="r">r</button>
+                <button data-key="t">t</button>
+                <button data-key="y">y</button>
+                <button data-key="u">u</button>
+                <button data-key="i">i</button>
+                <button data-key="o">o</button>
+                <button data-key="p">p</button>
+            </div>
+            <div class="keyboard-row">
+                <div class="spacer half"></div>
+                <button data-key="a">a</button>
+                <button data-key="s">s</button>
+                <button data-key="d">d</button>
+                <button data-key="f">f</button>
+                <button data-key="g">g</button>
+                <button data-key="h">h</button>
+                <button data-key="j">j</button>
+                <button data-key="k">k</button>
+                <button data-key="l">l</button>
+                <div class="spacer half"></div>
+            </div>
+            <div class="keyboard-row">
+                <button data-key="enter" class="wide-button">Enter</button>
+                <button data-key="z">z</button>
+                <button data-key="x">x</button>
+                <button data-key="c">c</button>
+                <button data-key="v">v</button>
+                <button data-key="b">b</button>
+                <button data-key="n">n</button>
+                <button data-key="m">m</button>
+                <button data-key="del" class="wide-button">Delete</button>
+            </div>
+        </div>
+
+        <div id="message-container"></div>
+    </div>
+
+    <script src="src/words.js"></script>
+    <script src="src/app.js"></script>
+</body>
+</html> 
