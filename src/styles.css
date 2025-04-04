@@ -74,6 +74,15 @@ h1 {
     margin: 0;
 }
 
+.wordle-number {
+    display: block;
+    font-size: 16px;
+    font-weight: normal;
+    letter-spacing: 1px;
+    margin-top: 2px;
+    color: #787c7e;
+}
+
 #board-container {
     display: flex;
     justify-content: center;

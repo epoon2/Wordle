@@ -1,50 +1,84 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Get mode from URL parameter if available
+    // Get mode and date parameters from URL
     const urlParams = new URLSearchParams(window.location.search);
     const modeParam = urlParams.get('mode');
+    const dateParam = urlParams.get('date');
+    const numberParam = urlParams.get('number');
     
-    // Game state
-    let gameMode = modeParam === 'random' ? 'random' : 'daily'; // Default mode is daily challenge unless specified
+    // Set the game mode
+    let gameMode = modeParam || 'daily'; // Default mode is daily challenge
+    let wordleNumber = 1; // Today is #1 by default
+    
+    // Game state variables
     let wordOfTheDay;
     let currentRow = 0;
     let currentTile = 0;
     let isGameOver = false;
     let gameStats = loadStats();
     
-    // Check if today's daily challenge has been completed
-    const dailyCompleted = checkDailyCompleted();
-    if (dailyCompleted && gameMode === 'daily') {
-        const savedState = getDailyState();
-        showMessage("You've already completed today's challenge!");
-        isGameOver = true;
+    // Update UI to show Wordle number if applicable
+    if (gameMode === 'previous' && numberParam) {
+        wordleNumber = parseInt(numberParam);
+        // Update page title
+        document.title = `Wordle #${wordleNumber}`;
+        // Update header if present
+        const header = document.querySelector('h1');
+        if (header) {
+            header.textContent = `WORDLE #${wordleNumber}`;
+        }
+    }
+    
+    // For 'previous' mode, we use the date parameter
+    if (gameMode === 'previous' && dateParam) {
+        // Get the specific word for that date
+        wordOfTheDay = getPreviousWord(dateParam);
         
-        // Create the game board first (we'll restore state after)
+        // Create the game board
         createBoard();
         setupKeyboard();
         setupButtons();
-        
-        // Set the word of the day
-        wordOfTheDay = getDailyWord();
-        
-        // Restore the previously played game state
-        if (savedState) {
-            restoreDailyState(savedState);
-            // Show the stats modal after a short delay
-            setTimeout(() => {
-                displayStats();
-            }, 800);
+    } else if (gameMode === 'daily') {
+        // Check if today's daily challenge has been completed
+        const dailyCompleted = checkDailyCompleted();
+        if (dailyCompleted) {
+            const savedState = getDailyState();
+            showMessage("You've already completed today's challenge!");
+            isGameOver = true;
+            
+            // Create the game board first (we'll restore state after)
+            createBoard();
+            setupKeyboard();
+            setupButtons();
+            
+            // Set the word of the day
+            wordOfTheDay = getDailyWord();
+            
+            // Restore the previously played game state
+            if (savedState) {
+                restoreDailyState(savedState);
+                // Show the stats modal after a short delay
+                setTimeout(() => {
+                    displayStats();
+                }, 800);
+            } else {
+                // If no saved state (unlikely), switch to random mode
+                gameMode = "random";
+                wordOfTheDay = getRandomWord();
+            }
         } else {
-            // If no saved state (unlikely), switch to random mode
-            gameMode = "random";
-            wordOfTheDay = getRandomWord();
+            // Set the word based on the game mode
+            wordOfTheDay = getDailyWord();
+            
+            // Create the game board
+            createBoard();
+            // Set up the keyboard listeners
+            setupKeyboard();
+            // Set up UI button listeners
+            setupButtons();
         }
     } else {
-        // Set the word based on the game mode
-        if (gameMode === 'daily') {
-            wordOfTheDay = getDailyWord();
-        } else {
-            wordOfTheDay = getRandomWord();
-        }
+        // Random mode
+        wordOfTheDay = getRandomWord();
         
         // Create the game board
         createBoard();
@@ -105,8 +139,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const modeToggle = document.createElement('button');
         modeToggle.id = 'mode-toggle';
         modeToggle.classList.add('icon-button');
-        modeToggle.innerHTML = gameMode === "daily" ? "📅" : "🎲";
-        modeToggle.title = gameMode === "daily" ? "Daily Challenge" : "Random Play";
+        
+        // Set the button appearance based on game mode
+        if (gameMode === "daily") {
+            modeToggle.innerHTML = "📅";
+            modeToggle.title = "Today's Wordle (#1)";
+        } else if (gameMode === "previous") {
+            modeToggle.innerHTML = "🗓️";
+            modeToggle.title = `Wordle #${wordleNumber}`;
+        } else {
+            modeToggle.innerHTML = "🎲";
+            modeToggle.title = "Random Play";
+        }
         
         // Add event listener to toggle game mode
         modeToggle.addEventListener('click', () => {
@@ -119,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Toggle the game mode
+            // Toggle between modes (previous mode goes to random)
             if (gameMode === "daily") {
                 // Switch to random mode
                 gameMode = "random";
@@ -128,13 +172,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordOfTheDay = getRandomWord();
                 restartGame();
                 showMessage("Switched to random play mode");
+                
+                // Update header if needed
+                const header = document.querySelector('h1');
+                if (header) {
+                    header.textContent = "WORDLE";
+                }
+                document.title = "Wordle Game";
+            } else if (gameMode === "previous") {
+                // Switch to random mode
+                gameMode = "random";
+                modeToggle.innerHTML = "🎲";
+                modeToggle.title = "Random Play";
+                wordOfTheDay = getRandomWord();
+                restartGame();
+                showMessage("Switched to random play mode");
+                
+                // Update header if needed
+                const header = document.querySelector('h1');
+                if (header) {
+                    header.textContent = "WORDLE";
+                }
+                document.title = "Wordle Game";
             } else {
                 // Check if daily already completed
                 if (checkDailyCompleted()) {
                     // Switch to daily mode but show the previous state
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
-                    modeToggle.title = "Daily Challenge";
+                    modeToggle.title = "Today's Wordle (#1)";
                     
                     // Show message and update the game board with previous attempt
                     showMessage("Showing your completed daily challenge");
@@ -147,6 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         restoreDailyState(savedState);
                         isGameOver = true;
                         
+                        // Update header if needed
+                        const header = document.querySelector('h1');
+                        if (header) {
+                            header.textContent = "WORDLE #1";
+                        }
+                        document.title = "Wordle #1";
+                        
                         // Show the stats modal after a short delay
                         setTimeout(() => {
                             displayStats();
@@ -156,10 +229,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Switch to daily mode with new game
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
-                    modeToggle.title = "Daily Challenge";
+                    modeToggle.title = "Today's Wordle (#1)";
                     wordOfTheDay = getDailyWord();
                     restartGame();
                     showMessage("Switched to daily challenge mode");
+                    
+                    // Update header if needed
+                    const header = document.querySelector('h1');
+                    if (header) {
+                        header.textContent = "WORDLE #1";
+                    }
+                    document.title = "Wordle #1";
                 }
             }
         });
@@ -518,7 +598,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const modeText = document.createElement('p');
             modeText.classList.add('mode-text');
-            modeText.textContent = gameMode === "daily" ? "Daily Challenge" : "Random Play";
+            
+            // Show the Wordle number for daily and previous modes
+            if (gameMode === 'daily') {
+                modeText.textContent = `Today's Wordle (#1)`;
+            } else if (gameMode === 'previous' && wordleNumber > 1) {
+                modeText.textContent = `Wordle #${wordleNumber}`;
+            } else {
+                modeText.textContent = "Random Play";
+            }
             
             const replayButton = document.createElement('button');
             replayButton.classList.add('replay-button');
@@ -537,6 +625,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Generate a new word based on the current mode
                 if (gameMode === "daily") {
                     wordOfTheDay = getDailyWord();
+                } else if (gameMode === "previous") {
+                    // For previous games, redirect to homepage
+                    window.location.href = "index.html";
+                    return;
                 } else {
                     wordOfTheDay = getRandomWord();
                 }
@@ -643,12 +735,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // Get a deterministic daily word based on the current date
     function getDailyWord() {
         const now = new Date();
-        const start = new Date(2022, 0, 1); // Start from Jan 1, 2022
+        return getWordForDate(now);
+    }
+    
+    // Get a word for a specific past date (for previous Wordles)
+    function getPreviousWord(dateString) {
+        const date = new Date(dateString);
+        return getWordForDate(date);
+    }
+    
+    // Get a word for a specific date
+    function getWordForDate(date) {
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        // We consider "today" as Wordle #1, so start is today
+        
         const msInDay = 86400000;
-        const daysSinceStart = Math.floor((now - start) / msInDay);
+        let daysSinceStart = 0;
+        
+        if (date < start) {
+            // If the date is in the past, it's a positive offset from today
+            daysSinceStart = Math.floor((start - date) / msInDay);
+        }
         
         // Get a word based on the day number (ensuring it cycles through the full word list)
-        const wordIndex = daysSinceStart % SOLUTION_WORDS.length;
+        // We use the negative of daysSinceStart so that older dates get different words
+        const wordIndex = Math.abs(daysSinceStart % SOLUTION_WORDS.length);
         return SOLUTION_WORDS[wordIndex];
     }
     
