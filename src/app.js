@@ -146,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 showMessage("You win!");
                 displayStats();
-                displayReplayButton();
             }, 1500);
             
             isGameOver = true;
@@ -155,9 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
             saveStats(gameStats);
             
             setTimeout(() => {
-                showMessage(`Game over! The word was ${wordOfTheDay}`);
+                showMessage(`Game over!`);
                 displayStats();
-                displayReplayButton();
             }, 1500);
             
             isGameOver = true;
@@ -371,6 +369,38 @@ document.addEventListener('DOMContentLoaded', () => {
         
         statsContainer.appendChild(guessDistribution);
         
+        // Add game result and word revelation if game is over
+        if (isGameOver) {
+            const resultContainer = document.createElement('div');
+            resultContainer.classList.add('result-container');
+            
+            const resultText = document.createElement('p');
+            resultText.classList.add('result-text');
+            if (gameStats.currentStreak > 0) {
+                resultText.textContent = "You won!";
+            } else {
+                resultText.textContent = "Game over!";
+            }
+            
+            const wordReveal = document.createElement('p');
+            wordReveal.classList.add('word-reveal');
+            wordReveal.textContent = `The word was: ${wordOfTheDay}`;
+            
+            const replayButton = document.createElement('button');
+            replayButton.classList.add('replay-button');
+            replayButton.textContent = 'Play Again';
+            replayButton.addEventListener('click', () => {
+                restartGame();
+                document.getElementById('stats-modal').style.display = 'none';
+            });
+            
+            resultContainer.appendChild(resultText);
+            resultContainer.appendChild(wordReveal);
+            resultContainer.appendChild(replayButton);
+            
+            statsContainer.appendChild(resultContainer);
+        }
+        
         // Show the modal
         document.getElementById('stats-modal').style.display = 'block';
     }
@@ -458,26 +488,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('help-modal').style.display = 'block';
     }
 
-    // Display a replay button
-    function displayReplayButton() {
-        // Check if replay button already exists
-        if (document.getElementById('replay-button')) {
-            document.getElementById('replay-button').style.display = 'block';
-            return;
-        }
-        
-        const replayButton = document.createElement('button');
-        replayButton.id = 'replay-button';
-        replayButton.textContent = 'Play Again';
-        replayButton.classList.add('replay-button');
-        
-        replayButton.addEventListener('click', () => {
-            restartGame();
-        });
-        
-        document.body.appendChild(replayButton);
-    }
-    
     // Restart the game
     function restartGame() {
         // Reset game state
@@ -502,11 +512,6 @@ document.addEventListener('DOMContentLoaded', () => {
         keys.forEach(key => {
             key.classList.remove('correct', 'present', 'absent');
         });
-        
-        // Hide replay button
-        if (document.getElementById('replay-button')) {
-            document.getElementById('replay-button').style.display = 'none';
-        }
         
         // Clear messages
         showMessage('');
