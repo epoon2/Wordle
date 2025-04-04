@@ -28,9 +28,17 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 
 ## How to Start the App
 
-The application is a static website with no build process required:
+There are two ways to play this Wordle clone:
 
-### Local Development
+### Option 1: Play Online (Easiest)
+
+Visit the deployed version at: [https://epoon2.github.io/Wordle/](https://epoon2.github.io/Wordle/)
+
+This is the quickest way to play - no installation required!
+
+### Option 2: Run Locally
+
+If you prefer to run the game on your own computer:
 
 1. Clone this repository
    ```bash
@@ -39,7 +47,7 @@ The application is a static website with no build process required:
    ```
 
 2. Open `index.html` in your browser
-   - Simply double-click the file, or drag the file onto your browser
+   - Simply double-click the file or drag it onto your browser
    - Or open it via browser: File > Open File
    - Or use a local server:
      ```bash
@@ -51,18 +59,6 @@ The application is a static website with no build process required:
      npx serve
      # Then open the URL displayed in terminal
      ```
-
-## Deployment
-
-This game can be easily deployed to GitHub Pages:
-
-1. In your GitHub repository, go to Settings
-2. Navigate to the Pages section
-3. Select the branch you want to deploy (usually `main`)
-4. Select the root folder
-5. Click Save
-
-Your game will be available at `https://epoon2.github.io/Wordle/`.
 
 ## License
 
