@@ -6,9 +6,9 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 
 - Daily word challenges
 - Keyboard input with visual feedback
-- Game state persistence (in progress)
+- Game state persistence
 - Mobile-responsive design
-- Statistics tracking (in progress)
+- Statistics tracking
 
 ## Technologies Used
 
@@ -32,6 +32,27 @@ cd Wordle
 
 # No build process required - open index.html directly
 ```
+
+## Deployment
+
+This game can be easily deployed to GitHub Pages:
+
+1. In your GitHub repository, go to Settings
+2. Navigate to the Pages section
+3. Select the branch you want to deploy (usually `main`)
+4. Select the root folder
+5. Click Save
+
+Your game will be available at `https://yourusername.github.io/Wordle/`.
+
+## Game Rules
+
+1. Guess the WORDLE in six tries.
+2. Each guess must be a valid five-letter word.
+3. After each guess, the color of the tiles will change to show how close your guess was to the word:
+   - Green: The letter is in the word and in the correct spot.
+   - Yellow: The letter is in the word but in the wrong spot.
+   - Gray: The letter is not in the word in any spot.
 
 ## License
 
