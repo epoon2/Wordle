@@ -1,7 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Get mode from URL parameter if available
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    
     // Game state
-    let gameMode = "daily"; // Default mode is daily challenge
-    let wordOfTheDay = getDailyWord();
+    let gameMode = modeParam === 'random' ? 'random' : 'daily'; // Default mode is daily challenge unless specified
+    let wordOfTheDay;
     let currentRow = 0;
     let currentTile = 0;
     let isGameOver = false;
@@ -9,8 +13,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check if today's daily challenge has been completed
     const dailyCompleted = checkDailyCompleted();
-    if (dailyCompleted) {
+    if (dailyCompleted && gameMode === 'daily') {
+        showMessage("You've already completed today's challenge! Switching to random mode.");
         gameMode = "random"; // Switch to random mode if daily already completed
+    }
+    
+    // Set the word based on the game mode
+    if (gameMode === 'daily') {
+        wordOfTheDay = getDailyWord();
+    } else {
         wordOfTheDay = getRandomWord();
     }
     
