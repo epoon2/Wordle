@@ -1,5 +1,8 @@
-// List of words that can be used as solutions
-const WORDS = [
+// NOTE: The provided GitHub token is not a valid URL for a word list.
+// Instead, we've implemented separate lists for solutions and valid guesses.
+
+// List of words that can be used as solutions - common, well-known 5-letter words
+const SOLUTION_WORDS = [
     'ABOUT', 'ABOVE', 'ABUSE', 'ACTOR', 'ACUTE', 'ADMIT', 'ADOPT', 'ADULT', 'AFTER', 'AGAIN',
     'AGENT', 'AGREE', 'AHEAD', 'ALARM', 'ALBUM', 'ALERT', 'ALIKE', 'ALIVE', 'ALLOW', 'ALONE',
     'ALONG', 'ALTER', 'AMONG', 'ANGER', 'ANGLE', 'ANGRY', 'ANKLE', 'APART', 'APPLE', 'APPLY',
@@ -68,12 +71,42 @@ const WORDS = [
     'YOUTH', 'ZEROS', 'ZONE', 'ZOOM'
 ];
 
-// Get a random word from the list
+// Additional 5-letter words that are valid guesses but not used as solutions
+const ADDITIONAL_VALID_WORDS = [
+    'ABACK', 'ABASE', 'ABATE', 'ABBEY', 'ABBOT', 'ABHOR', 'ABIDE', 'ABODE', 'ABORT', 'ABYSS',
+    'ACORN', 'ACRID', 'ACTOR', 'ADAGE', 'ADAPT', 'ADEPT', 'ADMIN', 'AFFIX', 'AFOOT', 'AGILE',
+    'AGING', 'AGONY', 'AGREE', 'AISLE', 'ALAMO', 'ALBUM', 'ALERT', 'ALGAE', 'ALIBI', 'ALIEN',
+    'ALIGN', 'ALIKE', 'ALLEY', 'ALLOT', 'ALLOY', 'ALOFT', 'ALOHA', 'ALPHA', 'ALTAR', 'ALTER',
+    'AMASS', 'AMAZE', 'AMBER', 'AMBLE', 'AMEND', 'AMISS', 'AMITY', 'AMUSE', 'ANGEL', 'ANGER',
+    'ANGLE', 'ANGRY', 'ANGST', 'ANIME', 'ANKLE', 'ANNEX', 'ANNOY', 'ANODE', 'ANTIC', 'ANVIL',
+    'AORTA', 'APHID', 'APING', 'APNEA', 'APPLE', 'APPLY', 'APRON', 'APTLY', 'ARBOR', 'ARDOR',
+    'AREAS', 'ARENA', 'ARGON', 'ARGOT', 'ARGUE', 'ARISE', 'ARMOR', 'AROMA', 'AROSE', 'ARRAY',
+    'ARROW', 'ARSON', 'ARTSY', 'ASCOT', 'ASHEN', 'ASIDE', 'ASKEW', 'ASSAY', 'ASSES', 'ASSET',
+    'ASTER', 'ATOMS', 'ATONE', 'ATTIC', 'AUDIO', 'AUDIT', 'AUGUR', 'AUNTY', 'AVAIL', 'AVERT',
+    'AVIAN', 'AVOID', 'AWAIT', 'AWAKE', 'AWARD', 'AWARE', 'AWFUL', 'AWOKE', 'AXIAL', 'AXIOM',
+    'AXION', 'AZURE', 'BACON', 'BADGE', 'BADLY', 'BAGEL', 'BAGGY', 'BAKED', 'BAKER', 'BALMY',
+    'BANAL', 'BANJO', 'BARGE', 'BARON', 'BASAL', 'BASIC', 'BASIL', 'BASIN', 'BASIS', 'BASTE',
+    'BATCH', 'BATHE', 'BATON', 'BATTY', 'BAWDY', 'BAYOU', 'BEACH', 'BEADY', 'BEARD', 'BEAST',
+    'BEATS', 'BEECH', 'BEEFY', 'BEFIT', 'BEGAN', 'BEGAT', 'BEGET', 'BEGIN', 'BEGUN', 'BEING',
+    'BELCH', 'BELIE', 'BELLE', 'BELLY', 'BELOW', 'BENCH', 'BERET', 'BERRY', 'BERTH', 'BESET',
+    'BETEL', 'BEVEL', 'BEZEL', 'BIBLE', 'BICEP', 'BIDDY', 'BIGOT', 'BILGE', 'BILLY', 'BINGE',
+    'BINGO', 'BIOME', 'BIRCH', 'BIRTH', 'BISON', 'BITTY', 'BLACK', 'BLADE', 'BLAME', 'BLAND',
+    'BLANK', 'BLARE', 'BLAST', 'BLAZE', 'BLEAK', 'BLEAT', 'BLEED', 'BLEEP', 'BLEND', 'BLESS',
+    'BLIMP', 'BLIND', 'BLINK', 'BLISS', 'BLITZ', 'BLOAT', 'BLOCK', 'BLOKE', 'BLOND', 'BLOOD',
+    'BLOOM', 'BLOWN', 'BLUER', 'BLUFF', 'BLUNT', 'BLURB', 'BLURT', 'BLUSH', 'BOARD', 'BOAST',
+    'BOBBY', 'BONEY', 'BONGO', 'BONUS', 'BOOBY', 'BOOST', 'BOOTH', 'BOOTY', 'BOOZE', 'BORAX',
+    'BORED', 'BORER', 'BORNE', 'BOSOM', 'BOSSY', 'BOTCH', 'BOUGH', 'BOULE', 'BOUND', 'BOWEL'
+];
+
+// Combine both lists for valid guesses
+const ALL_VALID_WORDS = [...SOLUTION_WORDS, ...ADDITIONAL_VALID_WORDS];
+
+// Get a random word from the solution list
 function getRandomWord() {
-    return WORDS[Math.floor(Math.random() * WORDS.length)];
+    return SOLUTION_WORDS[Math.floor(Math.random() * SOLUTION_WORDS.length)];
 }
 
-// Check if a word is in the list of valid words
+// Check if a word is in either list of valid words
 function isValidWord(word) {
-    return WORDS.includes(word.toUpperCase());
+    return ALL_VALID_WORDS.includes(word.toUpperCase());
 } 

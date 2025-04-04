@@ -132,12 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Check the guess
-        checkGuess(guess);
-        
-        // Move to the next row
-        currentRow++;
-        currentTile = 0;
+        // Check the guess - pass the current row index for proper coloring
+        checkGuess(guess, currentRow);
         
         // Check if the game is over
         if (guess.toUpperCase() === wordOfTheDay) {
@@ -153,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1500);
             
             isGameOver = true;
-        } else if (currentRow >= 6) {
+        } else if (currentRow >= 5) { // Check if this is the last row (index 5)
             gameStats.currentStreak = 0;
             saveStats(gameStats);
             
@@ -164,10 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             isGameOver = true;
         }
+        
+        // Move to the next row - moved after the game state check
+        currentRow++;
+        currentTile = 0;
     }
     
     // Check the guess against the word of the day
-    function checkGuess(guess) {
+    function checkGuess(guess, rowIndex) {
         const wordCopy = wordOfTheDay.split('');
         const guessUpper = guess.toUpperCase();
         const results = Array(5).fill('absent');
@@ -191,10 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Apply the results with an animation
+        // Apply the results with an animation - use the provided row index
         for (let i = 0; i < 5; i++) {
             setTimeout(() => {
-                const tile = document.getElementById(`tile-${currentRow}-${i}`);
+                const tile = document.getElementById(`tile-${rowIndex}-${i}`);
                 tile.classList.add(results[i]);
                 updateKeyboardKey(guess[i], results[i]);
             }, i * 250);
