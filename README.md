@@ -17,21 +17,45 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 - JavaScript
 - Local Storage for game state
 
-## Setup and Running
+## Directory Structure
+
+```
+wordle/
+├── src/                # Source files
+│   ├── app.js          # Game logic
+│   ├── styles.css      # Styling
+│   └── words.js        # Word dictionary
+├── index.html          # Main HTML file
+├── README.md           # Project documentation
+├── LICENSE             # MIT License
+└── .gitignore          # Git ignore file
+```
+
+## How to Start the App
+
+The application is a static website with no build process required:
+
+### Local Development
 
 1. Clone this repository
-2. Open `index.html` in your browser to play locally
-3. Alternatively, visit [deployment URL] to play online
+   ```bash
+   git clone https://github.com/yourusername/Wordle.git
+   cd Wordle
+   ```
 
-## Development
-
-```bash
-# Clone the repository
-git clone https://github.com/epoon2/Wordle.git
-cd Wordle
-
-# No build process required - open index.html directly
-```
+2. Open `index.html` in your browser
+   - Simply double-click the file
+   - Or open it via browser: File > Open File
+   - Or use a local server:
+     ```bash
+     # If you have Python installed:
+     python -m http.server
+     # Then open http://localhost:8000 in your browser
+     
+     # Or with Node.js and npx:
+     npx serve
+     # Then open the URL displayed in terminal
+     ```
 
 ## Deployment
 
@@ -43,7 +67,7 @@ This game can be easily deployed to GitHub Pages:
 4. Select the root folder
 5. Click Save
 
-Your game will be available at `https://epoon2.github.io/Wordle/`.
+Your game will be available at `https://yourusername.github.io/Wordle/`.
 
 ## Game Rules
 
