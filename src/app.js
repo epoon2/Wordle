@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeWordleDate();
     }
     
+    // CRITICAL FIX: Force reset daily completion status on page load if word has changed
+    forceResetDailyStatus();
+    
     // Get mode and date parameters from URL
     const modeParam = urlParams.get('mode');
     const dateParam = urlParams.get('date');
@@ -1270,5 +1273,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 6: 0
             }
         };
+    }
+
+    // CRITICAL FIX: Force reset daily completion status for new days
+    function forceResetDailyStatus() {
+        const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+        const today = new Date().toISOString().split('T')[0];
+        const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
+        const todaysWord = getDailyWord();
+        
+        console.log("CHECKING DAILY STATUS:", { 
+            today,
+            "completedToday": completedDailies.includes(today),
+            "savedStateDate": savedState.date,
+            "savedStateWord": savedState.word,
+            "todaysWord": todaysWord
+        });
+        
+        // If today is in completedDailies but the saved word doesn't match today's word,
+        // it means it's a new day but we're still showing it as completed
+        if (completedDailies.includes(today)) {
+            if (!savedState.word || savedState.word !== todaysWord) {
+                // Force remove today from completedDailies
+                const updatedCompletedDailies = completedDailies.filter(date => date !== today);
+                localStorage.setItem('completedDailies', JSON.stringify(updatedCompletedDailies));
+                
+                // Force delete the dailyState
+                localStorage.removeItem('dailyState');
+                
+                console.log("FORCE RESET: Cleared daily completion status for new day");
+            }
+        }
     }
 });
