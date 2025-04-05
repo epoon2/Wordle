@@ -85,6 +85,89 @@
         <div id="message-container"></div>
     </div>
 
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal" style="display: none;">
+        <div id="stats-content" class="modal-content">
+            <div class="stats-header">
+                <h2>STATISTICS</h2>
+                <button id="stats-close" class="close-button">×</button>
+            </div>
+            <div class="stats-numbers">
+                <div class="stat-item">
+                    <div id="games-played" class="stat-value">0</div>
+                    <div class="stat-label">Played</div>
+                </div>
+                <div class="stat-item">
+                    <div id="win-percentage" class="stat-value">0</div>
+                    <div class="stat-label">Win %</div>
+                </div>
+                <div class="stat-item">
+                    <div id="current-streak" class="stat-value">0</div>
+                    <div class="stat-label">Current Streak</div>
+                </div>
+                <div class="stat-item">
+                    <div id="max-streak" class="stat-value">0</div>
+                    <div class="stat-label">Max Streak</div>
+                </div>
+            </div>
+            <h3>GUESS DISTRIBUTION</h3>
+            <div class="guess-distribution">
+                <div class="guess-row">
+                    <div class="guess-label">1</div>
+                    <div class="guess-bar-container">
+                        <div id="guess-1" class="guess-bar" style="width: 0%;">
+                            <span id="guess-1-value" class="guess-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guess-row">
+                    <div class="guess-label">2</div>
+                    <div class="guess-bar-container">
+                        <div id="guess-2" class="guess-bar" style="width: 0%;">
+                            <span id="guess-2-value" class="guess-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guess-row">
+                    <div class="guess-label">3</div>
+                    <div class="guess-bar-container">
+                        <div id="guess-3" class="guess-bar" style="width: 0%;">
+                            <span id="guess-3-value" class="guess-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guess-row">
+                    <div class="guess-label">4</div>
+                    <div class="guess-bar-container">
+                        <div id="guess-4" class="guess-bar" style="width: 0%;">
+                            <span id="guess-4-value" class="guess-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guess-row">
+                    <div class="guess-label">5</div>
+                    <div class="guess-bar-container">
+                        <div id="guess-5" class="guess-bar" style="width: 0%;">
+                            <span id="guess-5-value" class="guess-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="guess-row">
+                    <div class="guess-label">6</div>
+                    <div class="guess-bar-container">
+                        <div id="guess-6" class="guess-bar" style="width: 0%;">
+                            <span id="guess-6-value" class="guess-value">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Game result will be added dynamically -->
+            <div class="game-result"></div>
+            <!-- Action buttons will be added dynamically -->
+            <div class="stats-action-buttons"></div>
+        </div>
+    </div>
+
     <script src="src/words.js"></script>
     <script src="src/app.js"></script>
 </body>

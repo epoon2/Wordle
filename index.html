@@ -32,6 +32,7 @@
             justify-content: center;
             height: 100vh;
             text-align: center;
+            position: relative;
         }
 
         .home-container {
@@ -43,8 +44,21 @@
         h1 {
             font-size: 4rem;
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.5rem;
             letter-spacing: 2px;
+        }
+        
+        .author {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+        
+        .current-date {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            color: #3a3a3c;
         }
 
         p {
@@ -94,6 +108,166 @@
             background-color: var(--color-present);
         }
 
+        .play-button.archive-button {
+            background-color: var(--color-absent);
+        }
+        
+        /* Previous Wordles modal */
+        .previous-modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s;
+        }
+        
+        .previous-modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 23px 0 rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .previous-modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .previous-modal-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .previous-modal-header p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0;
+        }
+        
+        .close-button {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .previous-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 0 10px;
+        }
+        
+        .previous-wordle-btn {
+            background-color: var(--color-absent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            text-align: center;
+        }
+        
+        .previous-wordle-btn:hover {
+            transform: translateY(-2px);
+            background-color: #5f6367;
+        }
+        
+        .previous-wordle-btn .number {
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .previous-wordle-btn .date {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+        
+        .previous-wordle-btn .status {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .previous-wordle-btn.completed {
+            position: relative;
+        }
+        
+        .previous-wordle-btn.completed:hover {
+            background-color: var(--color-correct) !important;
+            opacity: 0.9;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .archive-selector {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .archive-selector.active {
+            display: block;
+        }
+
+        .wordle-number-input {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .go-button {
+            padding: 8px 16px;
+            background-color: var(--color-absent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .wordle-date {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
+        }
+
         .mode-icon {
             font-size: 1.5rem;
         }
@@ -101,20 +275,6 @@
         .play-button:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .modes {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 2rem;
-        }
-
-        .mode {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.1rem;
         }
 
         .tiles-animation {
@@ -164,12 +324,40 @@
                 height: 50px;
                 font-size: 1.5rem;
             }
+            
+            .previous-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        html, body {
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+        iframe {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
+    <iframe src="game.html" id="game-frame"></iframe>
+    
+    <!-- Load Wordle solution words -->
+    <script src="src/words.js"></script>
+    
     <div class="home-container">
+        <!-- This content will be hidden, but we keep it for the initialization logic -->
         <h1>WORDLE</h1>
+        <div class="author">By: Ethan Poon</div>
+        <div id="current-date" class="current-date"></div>
         
         <div class="tiles-animation">
             <div class="home-tile correct">W</div>
@@ -184,13 +372,372 @@
         <div class="play-buttons">
             <a href="game.html?mode=daily" class="play-button daily-button">
                 <span class="mode-icon">📅</span>
-                <span>Daily Challenge</span>
+                <span>Today's Wordle (#<span id="today-number">1</span>)</span>
             </a>
             <a href="game.html?mode=random" class="play-button random-button">
                 <span class="mode-icon">🎲</span>
                 <span>Random Play</span>
             </a>
+            <button id="archive-button" class="play-button archive-button">
+                <span class="mode-icon">🗓️</span>
+                <span>Previous Wordles</span>
+            </button>
         </div>
     </div>
+    
+    <!-- Previous Wordles Modal -->
+    <div id="previous-modal" class="previous-modal">
+        <div class="previous-modal-content">
+            <span class="close-button" id="close-previous">&times;</span>
+            <div class="previous-modal-header">
+                <h2>Previous Wordles</h2>
+                <p>Select a previous puzzle to play</p>
+            </div>
+            <div id="previous-list" class="previous-list">
+                <!-- List of previous wordles will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set current date
+            const today = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('current-date').textContent = today.toLocaleDateString(undefined, options);
+            
+            // Calculate today's Wordle number (assuming #1 is today)
+            const wordleNumber = calculateWordleNumber(today);
+            document.getElementById('today-number').textContent = wordleNumber;
+            
+            // Previous Wordles Modal Elements
+            const archiveButton = document.getElementById('archive-button');
+            const previousModal = document.getElementById('previous-modal');
+            const closeButton = document.getElementById('close-previous');
+            const previousList = document.getElementById('previous-list');
+            
+            // Check for #previous in URL to auto-open the Previous Wordles modal
+            if (window.location.hash === '#previous') {
+                populatePreviousWordles(previousList, wordleNumber);
+                previousModal.style.display = 'block';
+                // Remove the hash to avoid reopening on refresh
+                history.replaceState(null, null, ' ');
+            }
+            
+            // Open Previous Wordles modal
+            archiveButton.addEventListener('click', () => {
+                populatePreviousWordles(previousList, wordleNumber);
+                previousModal.style.display = 'block';
+            });
+            
+            // Close Previous Wordles modal
+            closeButton.addEventListener('click', () => {
+                previousModal.style.display = 'none';
+            });
+            
+            // Close when clicking outside the modal
+            window.addEventListener('click', (event) => {
+                if (event.target === previousModal) {
+                    previousModal.style.display = 'none';
+                }
+            });
+            
+            // Add a hidden option to initialize the Wordle history (for development)
+            const initializeWordleHistory = () => {
+                // Calculate the date for Wordle #1 (41 days before today)
+                const firstWordleDate = new Date(today);
+                firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
+                firstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
+                
+                // Verify calculation
+                const msInDay = 86400000;
+                const checkDiff = Math.round((today - firstWordleDate) / msInDay);
+                if (checkDiff !== 41) {
+                    // Adjust date manually to ensure 41 days difference
+                    firstWordleDate.setTime(today.getTime() - (41 * msInDay));
+                    console.log("Adjusted first date calculation to ensure 41 days difference");
+                }
+                
+                // Store the first Wordle date
+                localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
+                
+                // We need to load the iframe first to get access to the full word list
+                const gameFrame = document.getElementById('game-frame');
+                if (!gameFrame || !gameFrame.contentWindow || !gameFrame.contentWindow.SOLUTION_WORDS) {
+                    // Load words.js first to get the full wordlist
+                    const script = document.createElement('script');
+                    script.src = 'src/words.js';
+                    script.onload = function() {
+                        // Now we have access to SOLUTION_WORDS
+                        continueInitialization();
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    // We already have access to the words
+                    continueInitialization();
+                }
+                
+                function continueInitialization() {
+                    // Try different methods to get the word list (in order of preference)
+                    let fullWordList;
+                    
+                    // 1. Check if we have it in the current window
+                    if (window.SOLUTION_WORDS && window.SOLUTION_WORDS.length > 1000) {
+                        fullWordList = window.SOLUTION_WORDS;
+                    } 
+                    // 2. Check if we can get it from the iframe
+                    else if (gameFrame && gameFrame.contentWindow && gameFrame.contentWindow.SOLUTION_WORDS) {
+                        fullWordList = gameFrame.contentWindow.SOLUTION_WORDS;
+                    } 
+                    // 3. Since we don't have access to the full list, use a hardcoded array
+                    else {
+                        // Use the first 100 words from the solution list
+                        // In a production environment, you'd include the full list
+                        fullWordList = [
+                            "ABACK","ABASE","ABATE","ABBEY","ABBOT","ABHOR","ABIDE","ABLED","ABODE","ABORT",
+                            "ABOUT","ABOVE","ABUSE","ABYSS","ACORN","ACRID","ACTOR","ACUTE","ADAGE","ADAPT",
+                            "ADEPT","ADMIN","ADMIT","ADOBE","ADOPT","ADORE","ADORN","ADULT","AFFIX","AFIRE",
+                            "AFOOT","AFOUL","AFTER","AGAIN","AGAPE","AGATE","AGENT","AGILE","AGING","AGLOW",
+                            "AGONY","AGORA","AGREE","AHEAD","AIDER","AISLE","ALARM","ALBUM","ALERT","ALGAE",
+                            "ALIBI","ALIEN","ALIGN","ALIKE","ALIVE","ALLAY","ALLEY","ALLOT","ALLOW","ALLOY",
+                            "ALOFT","ALONE","ALONG","ALOOF","ALOUD","ALPHA","ALTAR","ALTER","AMASS","AMAZE",
+                            "AMBER","AMBLE","AMEND","AMISS","AMITY","AMONG","AMPLY","AMUSE","ANGEL","ANGER",
+                            "ANGLE","ANGRY","ANGST","ANIME","ANKLE","ANNEX","ANNOY","ANNUL","ANODE","ANTIC",
+                            "ANVIL","AORTA","APART","APHID","APING","APNEA","APPLE","APPLY","APRON","APTLY",
+                            "BACON","BADGE","BADLY","BAGEL","BAGGY","BAKER","BALER","BALMY","BANAL","BANJO",
+                            "BARGE","BARON","BASAL","BASIC","BASIL","BASIN","BASIS","BASTE","BATCH","BATHE",
+                            "BATON","BATTY","BAWDY","BAYOU","BEACH","BEADY","BEARD","BEAST","BEECH","BEEFY",
+                            "BEFIT","BEGAN","BEGAT","BEGET","BEGIN","BEGUN","BEING","BELCH","BELIE","BELLE",
+                            "BELLY","BELOW","BENCH","BERET","BERRY","BERTH","BESET","BETEL","BEVEL","BEZEL",
+                            "BIBLE","BICEP","BIDDY","BIGOT","BILGE","BILLY","BINGE","BINGO","BIOME","BIRCH",
+                            "BIRTH","BISON","BITTY","BLACK","BLADE","BLAME","BLAND","BLANK","BLARE","BLAST",
+                            "BLAZE","BLEAK","BLEAT","BLEED","BLEEP","BLEND","BLESS","BLIMP","BLIND","BLINK",
+                            "BLISS","BLITZ","BLOAT","BLOCK","BLOKE","BLOND","BLOOD","BLOOM","BLOWN","BLUER",
+                            "BLUFF","BLUNT","BLURB","BLURT","BLUSH","BOARD","BOAST","BOBBY","BONEY","BONGO"
+                        ];
+                        
+                        // Add more random words
+                        const moreWords = [
+                            "CIGAR","CRIMP","DAILY","DANCE","DEPOT","DIGIT","DODGE","DOGMA","DOWRY","DREAM",
+                            "DRINK","DRIVE","EAGLE","EARTH","FAVOR","FERRY","FILLY","FINCH","FIRST","FLICK",
+                            "FLOOD","FLOUR","FLYBY","FLYER","FORAY","FORUM","FOUND","FRAME","FRESH","FRUIT",
+                            "FUNGI","GAMER","GECKO","GHOST","GIANT","GIDDY","GLEAM","GLEAN","GLOVE","GLYPH",
+                            "GOLEM","GRAFT","GRAND","GRAPE","GRAPH","GRASP","GRASS","GRATE","GRAVE","GRAVY"
+                        ];
+                        
+                        fullWordList = [...fullWordList, ...moreWords];
+                    }
+                    
+                    if (!fullWordList || fullWordList.length < 150) {
+                        alert('Warning: Using a reduced word list for initialization.');
+                    }
+                    
+                    // Create a copy of the word list excluding ABACK (which is for #42)
+                    const availableWords = fullWordList.filter(word => word !== 'ABACK');
+                    
+                    // Shuffle the array to get random words
+                    const shuffledWords = [...availableWords];
+                    for (let i = shuffledWords.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffledWords[i], shuffledWords[j]] = [shuffledWords[j], shuffledWords[i]];
+                    }
+                    
+                    // Take the first 41 words for our past Wordles
+                    const selectedWords = shuffledWords.slice(0, 41);
+                    
+                    // Create a record for the word overrides
+                    const wordOverrides = {};
+                    
+                    // Create 41 previous Wordles (all completed)
+                    for (let i = 0; i < 41; i++) {
+                        const date = new Date(firstWordleDate);
+                        date.setDate(firstWordleDate.getDate() + i);
+                        
+                        const dateString = date.toISOString().split('T')[0];
+                        const word = selectedWords[i];
+                        
+                        // Store the word override
+                        wordOverrides[dateString] = word;
+                        
+                        // Create a completed game for this date
+                        const pastGame = {
+                            word: word,
+                            date: dateString,
+                            completed: true,
+                            guesses: Math.floor(Math.random() * 5) + 1, // Random number of guesses (1-5)
+                            gameBoard: [] // We don't need actual guesses for this demo
+                        };
+                        
+                        // Store in localStorage
+                        localStorage.setItem(`wordle_${dateString}`, JSON.stringify(pastGame));
+                    }
+                    
+                    // Store word overrides
+                    localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+                    
+                    // Add today's word (ABACK) as Wordle #42
+                    const todayString = today.toISOString().split('T')[0];
+                    wordOverrides[todayString] = 'ABACK';
+                    localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+                    
+                    // Reset stats
+                    const stats = {
+                        gamesPlayed: 41,
+                        gamesWon: 41,
+                        currentStreak: 41,
+                        maxStreak: 41,
+                        guessDistribution: {
+                            1: Math.floor(Math.random() * 5) + 1,
+                            2: Math.floor(Math.random() * 10) + 3,
+                            3: Math.floor(Math.random() * 12) + 5,
+                            4: Math.floor(Math.random() * 10) + 3,
+                            5: Math.floor(Math.random() * 8) + 2,
+                            6: Math.floor(Math.random() * 5) + 1
+                        }
+                    };
+                    localStorage.setItem('wordleStats', JSON.stringify(stats));
+                    
+                    // Create completedDailies array (list of dates completed)
+                    const completedDailies = [];
+                    for (let i = 0; i < 41; i++) {
+                        const date = new Date(firstWordleDate);
+                        date.setDate(firstWordleDate.getDate() + i);
+                        completedDailies.push(date.toISOString().split('T')[0]);
+                    }
+                    localStorage.setItem('completedDailies', JSON.stringify(completedDailies));
+                    
+                    alert('Wordle history initialized! Today is now Wordle #42 with the word ABACK.');
+                    
+                    // Reload the page to see changes
+                    location.reload();
+                }
+            };
+            
+            // Secret key combination to initialize history: Press 'init' keys
+            let keySequence = '';
+            document.addEventListener('keydown', (e) => {
+                keySequence += e.key.toLowerCase();
+                if (keySequence.includes('init')) {
+                    if (confirm('Initialize Wordle history to make today #42? This will set up 41 previous Wordles.')) {
+                        initializeWordleHistory();
+                    }
+                    keySequence = '';
+                }
+                // Only keep the last 10 characters to avoid memory issues
+                if (keySequence.length > 10) {
+                    keySequence = keySequence.slice(-10);
+                }
+            });
+            
+            // Function to calculate the current Wordle number
+            function calculateWordleNumber(date) {
+                // Check if we have a stored first Wordle date
+                let firstWordleDate = localStorage.getItem('firstWordleDate');
+                
+                if (!firstWordleDate) {
+                    // If this is the first time, store today as the first Wordle date
+                    firstWordleDate = today.toISOString().split('T')[0];
+                    localStorage.setItem('firstWordleDate', firstWordleDate);
+                    return 1; // This is Wordle #1
+                }
+                
+                // Calculate days since the first Wordle
+                const firstDate = new Date(firstWordleDate);
+                firstDate.setHours(0, 0, 0, 0); // Normalize to start of day
+                const msInDay = 86400000;
+                
+                // Make sure we get at least 1 for today
+                const daysDiff = Math.max(0, (today - firstDate) / msInDay);
+                const daysSinceFirst = Math.floor(daysDiff) + 1;
+                
+                return daysSinceFirst;
+            }
+            
+            // Function to populate the previous Wordles list
+            function populatePreviousWordles(container, currentNumber) {
+                container.innerHTML = '';
+                
+                // If today is #1, there are no previous Wordles
+                if (currentNumber <= 1) {
+                    const message = document.createElement('p');
+                    message.style.gridColumn = '1 / span 3';
+                    message.style.textAlign = 'center';
+                    message.style.padding = '20px';
+                    message.textContent = 'No previous Wordles yet. Check back tomorrow!';
+                    container.appendChild(message);
+                    return;
+                }
+                
+                // Get the completed previous Wordles list
+                const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+                
+                // Create buttons for previous Wordles (#1 to #current-1)
+                for (let i = currentNumber - 1; i >= 1; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - (currentNumber - i));
+                    
+                    const dateStr = date.toISOString().split('T')[0];
+                    const formattedDate = date.toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    
+                    const button = document.createElement('button');
+                    button.className = 'previous-wordle-btn';
+                    
+                    // Check if this Wordle has been completed
+                    const isCompleted = completedPrevious.includes(dateStr);
+                    if (isCompleted) {
+                        button.classList.add('completed');
+                        button.style.backgroundColor = 'var(--color-correct)';
+                        
+                        // Get the saved state to show if they won or lost
+                        const savedState = JSON.parse(localStorage.getItem(`wordle_${dateStr}`) || '{}');
+                        if (savedState && savedState.won === false) {
+                            // They lost this one
+                            button.style.backgroundColor = '#888'; // Dark gray for losses
+                        }
+                    }
+                    
+                    button.innerHTML = `
+                        <span class="number">#${i}</span>
+                        <span class="date">${formattedDate}</span>
+                        ${isCompleted ? '<span class="status">✓</span>' : ''}
+                    `;
+                    
+                    button.addEventListener('click', () => {
+                        window.location.href = `game.html?mode=previous&date=${dateStr}&number=${i}`;
+                    });
+                    
+                    container.appendChild(button);
+                }
+            }
+        });
+    </script>
+    
+    <!-- Hidden admin button for initialization -->
+    <div style="position: fixed; bottom: 10px; right: 10px; opacity: 0.1; font-size: 10px; cursor: pointer; z-index: 9999;" id="admin-init">
+        Admin
+    </div>
+    
+    <script>
+        // Add click handler for the admin button
+        document.getElementById('admin-init').addEventListener('click', function() {
+            if (confirm('Initialize Wordle history to make today #42? This will set up 41 previous Wordles.')) {
+                // Check if the function exists in this scope
+                if (typeof initializeWordleHistory === 'function') {
+                    initializeWordleHistory();
+                } else {
+                    alert('Initialization function not found. Please refresh the page and try again.');
+                }
+            }
+        });
+    </script>
 </body>
 </html> 
