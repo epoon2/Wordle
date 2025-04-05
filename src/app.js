@@ -447,7 +447,10 @@ document.addEventListener('DOMContentLoaded', () => {
             gameStats.gamesWon++;
             gameStats.currentStreak++;
             gameStats.maxStreak = Math.max(gameStats.maxStreak, gameStats.currentStreak);
-            gameStats.guesses[currentRow]++;
+            
+            // Fix the off-by-one error: currentRow is zero-indexed, but our guess counts are 1-indexed
+            // Add 1 to correctly record which guess number the word was solved on
+            gameStats.guesses[currentRow + 1]++;
             
             // If in daily mode, mark as completed and save the state
             if (gameMode === "daily") {
