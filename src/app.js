@@ -96,7 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Update title and header with the current wordle number
-        if (wordleNumber > 0) {
+        if (gameMode === 'random') {
+            // For random mode, just show "WORDLE" without a number
+            document.title = "Wordle";
+            const header = document.querySelector('h1');
+            if (header) {
+                header.textContent = "WORDLE";
+            }
+        } else if (wordleNumber > 0) {
             document.title = `Wordle #${wordleNumber}`;
             // Update header if present
             const header = document.querySelector('h1');
@@ -215,12 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 restartGame();
                 showMessage("Switched to random play mode");
                 
-                // Update header if needed
+                // Update header if needed - random mode has no number
                 const header = document.querySelector('h1');
                 if (header) {
                     header.textContent = "WORDLE";
                 }
-                document.title = "Wordle Game";
+                document.title = "Wordle";
             } else if (gameMode === "previous") {
                 // Switch to random mode
                 gameMode = "random";
@@ -230,12 +237,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 restartGame();
                 showMessage("Switched to random play mode");
                 
-                // Update header if needed
+                // Update header if needed - random mode has no number
                 const header = document.querySelector('h1');
                 if (header) {
                     header.textContent = "WORDLE";
                 }
-                document.title = "Wordle Game";
+                document.title = "Wordle";
             } else {
                 // Check if daily already completed
                 if (checkDailyCompleted()) {
@@ -643,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show the Wordle number for daily and previous modes
             if (gameMode === 'daily') {
-                modeText.textContent = `Today's Wordle (#1)`;
+                modeText.textContent = `Today's Wordle (#${wordleNumber})`;
             } else if (gameMode === 'previous' && wordleNumber > 1) {
                 modeText.textContent = `Wordle #${wordleNumber}`;
             } else {
