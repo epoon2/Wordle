@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Debug</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 
+                'Open Sans', 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .log {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wordle Debug Tool</h1>
+    <p>This tool will help diagnose and fix issues with your Wordle game.</p>
+    
+    <button id="init-button">Force Initialize Wordle History</button>
+    <button id="check-button">Check Current Settings</button>
+    <button id="clear-button">Clear All localStorage</button>
+    <button id="go-home">Go to Homepage</button>
+    
+    <div class="log">
+        <h3>Console Output:</h3>
+        <pre id="log-output"></pre>
+    </div>
+    
+    <script src="src/words.js"></script>
+    <script>
+        // Log function to display in the UI
+        function log(message) {
+            const output = document.getElementById('log-output');
+            const time = new Date().toLocaleTimeString();
+            output.textContent += `[${time}] ${message}\n`;
+            console.log(message);
+        }
+        
+        // Today's date
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        
+        // Auto-initialize Wordle history
+        function autoInitializeWordleHistory() {
+            try {
+                log("Auto-initializing Wordle history...");
+                
+                // Calculate the date for Wordle #1 (41 days before today)
+                const firstWordleDate = new Date(today);
+                firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
+                firstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
+                
+                // Verify calculation with milliseconds for accuracy
+                const msInDay = 86400000;
+                const checkDiff = Math.round((today - firstWordleDate) / msInDay);
+                
+                log(`Calculated date for Wordle #1: ${firstWordleDate.toISOString()}`);
+                log(`Days difference check: ${checkDiff} (should be 41)`);
+                
+                if (checkDiff !== 41) {
+                    // Adjust date manually to ensure exactly 41 days difference
+                    firstWordleDate.setTime(today.getTime() - (41 * msInDay));
+                    log("Adjusted first date calculation to ensure 41 days difference");
+                    log(`New date for Wordle #1: ${firstWordleDate.toISOString()}`);
+                }
+                
+                // Store the first Wordle date
+                localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
+                log(`Set firstWordleDate to ${firstWordleDate.toISOString()}`);
+                
+                // Make sure to set the version
+                localStorage.setItem('wordleVersion', '1.0');
+                log("Set wordleVersion to 1.0");
+                
+                // Create word overrides to ensure consistent solution words
+                const wordOverrides = {};
+                
+                // Make sure SOLUTION_WORDS is defined and accessible
+                if (!SOLUTION_WORDS || SOLUTION_WORDS.length === 0) {
+                    log("ERROR: SOLUTION_WORDS is not defined or empty!");
+                    log("Words.js might not be loaded correctly.");
+                    return false;
+                }
+                
+                log(`Using ${SOLUTION_WORDS.length} solution words as base`);
+                
+                // Assign word overrides for previous dates (use a deterministic algorithm)
+                const prime = 31;
+                for (let i = 0; i < 41; i++) {
+                    const date = new Date(firstWordleDate);
+                    date.setDate(firstWordleDate.getDate() + i);
+                    
+                    const dateString = date.toISOString().split('T')[0];
+                    
+                    // Get a word using a deterministic algorithm (different from the default algorithm)
+                    // This ensures consistent word selection across all user devices
+                    const wordIndex = (i * prime) % SOLUTION_WORDS.length;
+                    const word = SOLUTION_WORDS[wordIndex];
+                    
+                    // Skip ABACK since we're reserving it for today (#42)
+                    if (word !== 'ABACK') {
+                        wordOverrides[dateString] = word;
+                    } else {
+                        // Use the next word if we hit ABACK
+                        wordOverrides[dateString] = SOLUTION_WORDS[(wordIndex + 1) % SOLUTION_WORDS.length];
+                    }
+                }
+                
+                // Set today's word to ABACK explicitly
+                const todayString = today.toISOString().split('T')[0];
+                wordOverrides[todayString] = 'ABACK';
+                
+                // Store word overrides
+                localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+                log("Word overrides stored successfully with " + Object.keys(wordOverrides).length + " dates");
+                
+                // Clear any existing completed games
+                localStorage.removeItem('completedDailies');
+                localStorage.removeItem('completedPreviousWordles');
+                log("Cleared any existing completed games");
+                
+                // For returning visitors who may have stats, preserve them
+                // For new visitors, initialize empty stats
+                if (!localStorage.getItem('wordleStats')) {
+                    const stats = {
+                        gamesPlayed: 0,
+                        gamesWon: 0,
+                        currentStreak: 0,
+                        maxStreak: 0,
+                        guesses: {
+                            1: 0,
+                            2: 0,
+                            3: 0,
+                            4: 0,
+                            5: 0,
+                            6: 0
+                        }
+                    };
+                    localStorage.setItem('wordleStats', JSON.stringify(stats));
+                    log("Initialized empty stats");
+                } else {
+                    log("Preserved existing stats");
+                }
+                
+                log("Wordle history initialization complete! Today is Wordle #42");
+                return true;
+            } catch (error) {
+                log("ERROR during initialization: " + error.message);
+                return false;
+            }
+        }
+        
+        // Check current settings
+        function checkCurrentSettings() {
+            log("Checking current Wordle settings...");
+            
+            // Check firstWordleDate
+            const firstWordleDate = localStorage.getItem('firstWordleDate');
+            if (firstWordleDate) {
+                log(`First Wordle date: ${firstWordleDate}`);
+                
+                // Calculate current Wordle number
+                const firstDate = new Date(firstWordleDate);
+                firstDate.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0);
+                
+                const msInDay = 86400000;
+                const daysDiff = Math.round((today - firstDate) / msInDay);
+                const currentNumber = daysDiff + 1;
+                
+                log(`Current Wordle should be #${currentNumber}`);
+            } else {
+                log("No firstWordleDate set!");
+            }
+            
+            // Check wordleVersion
+            const version = localStorage.getItem('wordleVersion');
+            log(`Wordle version: ${version || "Not set"}`);
+            
+            // Check wordleOverrides
+            const overrides = JSON.parse(localStorage.getItem('wordleOverrides') || '{}');
+            const numOverrides = Object.keys(overrides).length;
+            log(`Word overrides: ${numOverrides} dates`);
+            
+            // Check if today's word is set to ABACK
+            const todayString = today.toISOString().split('T')[0];
+            log(`Today's word override: ${overrides[todayString] || "Not set"}`);
+            
+            // Check completed games
+            const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
+            log(`Completed dailies: ${completedDailies.length}`);
+            
+            const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+            log(`Completed previous Wordles: ${completedPrevious.length}`);
+            
+            // Check stats
+            const stats = JSON.parse(localStorage.getItem('wordleStats') || '{}');
+            log(`Games played: ${stats.gamesPlayed || 0}`);
+            log(`Games won: ${stats.gamesWon || 0}`);
+            
+            log("Settings check complete");
+        }
+        
+        // Clear all localStorage
+        function clearAllLocalStorage() {
+            if (confirm("Are you sure you want to clear ALL Wordle data? This cannot be undone.")) {
+                localStorage.clear();
+                log("All localStorage data cleared");
+            }
+        }
+        
+        // Set up event listeners
+        document.getElementById('init-button').addEventListener('click', autoInitializeWordleHistory);
+        document.getElementById('check-button').addEventListener('click', checkCurrentSettings);
+        document.getElementById('clear-button').addEventListener('click', clearAllLocalStorage);
+        document.getElementById('go-home').addEventListener('click', function() {
+            window.location.href = 'index.html';
+        });
+        
+        // Initial log
+        log("Debug tool loaded. Select an action to begin.");
+    </script>
+</body>
+</html> 
