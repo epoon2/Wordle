@@ -725,11 +725,48 @@
     <script>
         // Check if URL has #previous hash to automatically open the Previous Wordles modal
         document.addEventListener('DOMContentLoaded', function() {
+            // Ensure Wordle initialization happens on index.html too
+            // This ensures the correct Wordle number is shown on first visit
+            ensureWordleInitialization();
+            
             if (window.location.hash === '#previous') {
                 console.log('Opening Previous Wordles modal...');
                 document.getElementById('previous-modal').style.display = 'block';
             }
         });
+        
+        // Function to ensure proper Wordle initialization
+        function ensureWordleInitialization() {
+            // Get today's date
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to start of day
+            
+            // Check if we need to initialize
+            const firstWordleDate = localStorage.getItem('firstWordleDate');
+            const currentVersion = "1.0";
+            const storedVersion = localStorage.getItem('wordleVersion');
+            
+            if (!firstWordleDate || storedVersion !== currentVersion) {
+                console.log("Initializing Wordle history on homepage...");
+                
+                // Calculate the date for Wordle #1 (41 days before today)
+                const firstWordleDate = new Date(today);
+                firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
+                firstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
+                
+                // Store the first Wordle date
+                localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
+                localStorage.setItem('wordleVersion', currentVersion);
+                
+                // Update the UI to show the correct number
+                const currentNumber = calculateWordleNumber(today);
+                document.querySelector('.daily-button').textContent = `Play Wordle #${currentNumber}`;
+            } else {
+                // Just update the UI with the correct number
+                const currentNumber = calculateWordleNumber(today);
+                document.querySelector('.daily-button').textContent = `Play Wordle #${currentNumber}`;
+            }
+        }
     </script>
 </body>
 </html> 
