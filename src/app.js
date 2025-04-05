@@ -874,7 +874,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkDailyCompleted() {
         const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-        return completedDailies.includes(today);
+        
+        // First check if the date is in the completed list
+        if (!completedDailies.includes(today)) {
+            return false;
+        }
+        
+        // Next, verify the saved state has the same word as today's word
+        const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
+        const todaysWord = getDailyWord();
+        
+        // Only consider it completed if the saved state exists, 
+        // is from today, and has the same word as today's word
+        return (savedState.date === today && savedState.word === todaysWord);
     }
     
     // Mark today's daily challenge as completed
