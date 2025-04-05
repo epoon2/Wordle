@@ -36,6 +36,22 @@ document.addEventListener('DOMContentLoaded', () => {
         setupKeyboard();
         setupButtons();
     } else if (gameMode === 'daily') {
+        // Get today's word
+        wordOfTheDay = getDailyWord();
+        
+        // For testing purposes - ensure today's word is ABACK for Wordle #42
+        if (wordleNumber === 42) {
+            // Check if we need to override the word to make it ABACK
+            if (wordOfTheDay !== 'ABACK') {
+                // Create the override if needed
+                const overrides = JSON.parse(localStorage.getItem('wordleOverrides') || '{}');
+                const today = new Date().toISOString().split('T')[0];
+                overrides[today] = 'ABACK';
+                localStorage.setItem('wordleOverrides', JSON.stringify(overrides));
+                wordOfTheDay = 'ABACK';
+            }
+        }
+        
         // Check if today's daily challenge has been completed
         const dailyCompleted = checkDailyCompleted();
         if (dailyCompleted) {
@@ -850,25 +866,38 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Get a word for a specific date
     function getWordForDate(date) {
+        // Ensure date is normalized to midnight
+        const normalizedDate = new Date(date);
+        normalizedDate.setHours(0, 0, 0, 0);
+        
+        // Format the date as YYYY-MM-DD
+        const dateStr = normalizedDate.toISOString().split('T')[0];
+        
+        // Check for word overrides first - this ensures our 41 history words and #42 ABACK are used
+        const overrides = JSON.parse(localStorage.getItem('wordleOverrides') || '{}');
+        if (overrides[dateStr]) {
+            return overrides[dateStr];
+        }
+        
         // Get the first Wordle date from localStorage
         const firstWordleDate = localStorage.getItem('firstWordleDate');
         
         // If no first date is stored, use today
-        const firstDate = firstWordleDate ? new Date(firstWordleDate) : today;
+        const firstDate = firstWordleDate ? new Date(firstWordleDate) : normalizedDate;
         firstDate.setHours(0, 0, 0, 0);
         
         const msInDay = 86400000;
         let daysSinceStart = 0;
         
         // Calculate days between the target date and first Wordle date
-        if (date < firstDate) {
+        if (normalizedDate < firstDate) {
             // Dates before the first Wordle shouldn't be accessible,
             // but we handle it by using a modulo of the absolute difference
-            daysSinceStart = Math.floor((firstDate - date) / msInDay);
+            daysSinceStart = Math.floor((firstDate - normalizedDate) / msInDay);
             daysSinceStart = daysSinceStart % SOLUTION_WORDS.length;
         } else {
             // Normal case: date is after or equal to first Wordle
-            daysSinceStart = Math.floor((date - firstDate) / msInDay);
+            daysSinceStart = Math.floor((normalizedDate - firstDate) / msInDay);
         }
         
         // Get a word based on the day number, ensuring it cycles through solution words
@@ -1013,4 +1042,12 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('firstWordleDate', today.toISOString().split('T')[0]);
         }
     }
-}); 
+});
+
+// Initialize the game
+window.addEventListener('DOMContentLoaded', init);
+
+// Expose necessary functions to the global scope for admin tools
+window.gameApp = {
+    getWordForDate: getWordForDate
+}; 
