@@ -319,7 +319,7 @@ h1 {
 }
 
 .guess-bar {
-    background-color: var(--color-absent);
+    background-color: var(--color-correct);
     height: 100%;
     display: flex;
     align-items: center;

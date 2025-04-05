@@ -606,7 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show a different message depending on the game mode
         let modeText = '';
         if (gameMode === 'daily') {
-            modeText = `Today's Wordle (#${wordleNumber})`;
+            modeText = `Today's Wordle (#${getCurrentWordleNumber()})`;
         } else if (gameMode === 'previous' && numberParam) {
             modeText = `Wordle #${numberParam}`;
         } else {
