@@ -1088,12 +1088,96 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to initialize or fix the firstWordleDate if needed
     function initializeWordleDate() {
         const calculatedNumber = getCurrentWordleNumber();
+        const firstWordleDate = localStorage.getItem('firstWordleDate');
         
-        // If we're getting 0 or a negative number, reset the firstWordleDate
-        if (calculatedNumber <= 0) {
-            localStorage.removeItem('firstWordleDate');
-            localStorage.setItem('firstWordleDate', today.toISOString().split('T')[0]);
+        // If no firstWordleDate is set or we're getting incorrect numbers, initialize properly
+        if (!firstWordleDate || calculatedNumber <= 0 || calculatedNumber > 50) {
+            // We want to make sure today is Wordle #42 with ABACK as the solution
+            autoInitializeWordleHistory();
         }
+    }
+
+    // Automatically initialize Wordle history for all visitors if needed
+    function autoInitializeWordleHistory() {
+        console.log("Auto-initializing Wordle history...");
+        
+        // Calculate the date for Wordle #1 (41 days before today)
+        const firstWordleDate = new Date(today);
+        firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
+        firstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
+        
+        // Verify calculation with milliseconds for accuracy
+        const msInDay = 86400000;
+        const checkDiff = Math.round((today - firstWordleDate) / msInDay);
+        
+        if (checkDiff !== 41) {
+            // Adjust date manually to ensure exactly 41 days difference
+            firstWordleDate.setTime(today.getTime() - (41 * msInDay));
+            console.log("Adjusted first date calculation to ensure 41 days difference");
+        }
+        
+        // Store the first Wordle date
+        localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
+        console.log(`Set firstWordleDate to ${firstWordleDate.toISOString()}`);
+        
+        // Create word overrides to ensure consistent solution words
+        const wordOverrides = {};
+        
+        // Assign word overrides for previous dates (use a deterministic algorithm)
+        const prime = 31;
+        for (let i = 0; i < 41; i++) {
+            const date = new Date(firstWordleDate);
+            date.setDate(firstWordleDate.getDate() + i);
+            
+            const dateString = date.toISOString().split('T')[0];
+            
+            // Get a word using a deterministic algorithm (different from the default algorithm)
+            // This ensures consistent word selection across all user devices
+            const wordIndex = (i * prime) % SOLUTION_WORDS.length;
+            const word = SOLUTION_WORDS[wordIndex];
+            
+            // Skip ABACK since we're reserving it for today (#42)
+            if (word !== 'ABACK') {
+                wordOverrides[dateString] = word;
+            } else {
+                // Use the next word if we hit ABACK
+                wordOverrides[dateString] = SOLUTION_WORDS[(wordIndex + 1) % SOLUTION_WORDS.length];
+            }
+        }
+        
+        // Set today's word to ABACK explicitly
+        const todayString = today.toISOString().split('T')[0];
+        wordOverrides[todayString] = 'ABACK';
+        
+        // Store word overrides
+        localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+        console.log("Word overrides stored successfully");
+        
+        // Clear any existing completed games
+        localStorage.removeItem('completedDailies');
+        localStorage.removeItem('completedPreviousWordles');
+        
+        // For returning visitors who may have stats, preserve them
+        // For new visitors, initialize empty stats
+        if (!localStorage.getItem('wordleStats')) {
+            const stats = {
+                gamesPlayed: 0,
+                gamesWon: 0,
+                currentStreak: 0,
+                maxStreak: 0,
+                guesses: {
+                    1: 0,
+                    2: 0,
+                    3: 0,
+                    4: 0,
+                    5: 0,
+                    6: 0
+                }
+            };
+            localStorage.setItem('wordleStats', JSON.stringify(stats));
+        }
+        
+        return true;
     }
 
     // Get or initialize game statistics
