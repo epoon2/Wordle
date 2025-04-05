@@ -657,39 +657,95 @@ document.addEventListener('DOMContentLoaded', () => {
                 modeText.textContent = "Random Play";
             }
             
-            const replayButton = document.createElement('button');
-            replayButton.classList.add('replay-button');
-            replayButton.textContent = 'Play Again';
-            replayButton.addEventListener('click', () => {
-                // If we're in daily mode and it's completed, switch to random mode
-                if (gameMode === "daily" && checkDailyCompleted()) {
+            resultContainer.appendChild(resultText);
+            resultContainer.appendChild(wordReveal);
+            resultContainer.appendChild(modeText);
+            
+            // Different buttons based on game mode
+            if (gameMode === 'daily') {
+                // For daily mode: Show Random Play and Previous Wordles buttons
+                const buttonsContainer = document.createElement('div');
+                buttonsContainer.classList.add('popup-buttons-container');
+                buttonsContainer.style.display = 'flex';
+                buttonsContainer.style.gap = '10px';
+                buttonsContainer.style.justifyContent = 'center';
+                buttonsContainer.style.marginTop = '15px';
+                
+                // Random Play button
+                const randomButton = document.createElement('button');
+                randomButton.classList.add('replay-button');
+                randomButton.textContent = 'Random Play';
+                randomButton.style.backgroundColor = 'var(--color-present)';
+                randomButton.addEventListener('click', () => {
+                    // Switch to random mode
                     gameMode = "random";
                     const modeToggle = document.getElementById('mode-toggle');
                     if (modeToggle) {
                         modeToggle.innerHTML = "🎲";
                         modeToggle.title = "Random Play";
                     }
-                }
-                
-                // Generate a new word based on the current mode
-                if (gameMode === "daily") {
-                    wordOfTheDay = getDailyWord();
-                } else if (gameMode === "previous") {
-                    // For previous games, redirect to homepage
-                    window.location.href = "index.html";
-                    return;
-                } else {
+                    
+                    // Get a new random word
                     wordOfTheDay = getRandomWord();
-                }
+                    
+                    // Update header to not show number for random mode
+                    const header = document.querySelector('h1');
+                    if (header) {
+                        header.textContent = "WORDLE";
+                    }
+                    document.title = "Wordle";
+                    
+                    // Restart game and close the modal
+                    restartGame();
+                    document.getElementById('stats-modal').style.display = 'none';
+                });
                 
-                restartGame();
-                document.getElementById('stats-modal').style.display = 'none';
-            });
-            
-            resultContainer.appendChild(resultText);
-            resultContainer.appendChild(wordReveal);
-            resultContainer.appendChild(modeText);
-            resultContainer.appendChild(replayButton);
+                // Previous Wordles button
+                const previousButton = document.createElement('button');
+                previousButton.classList.add('replay-button');
+                previousButton.textContent = 'Previous Wordles';
+                previousButton.style.backgroundColor = 'var(--color-absent)';
+                previousButton.addEventListener('click', () => {
+                    // Redirect to the homepage with a focus on previous wordles
+                    window.location.href = "index.html#previous";
+                });
+                
+                buttonsContainer.appendChild(randomButton);
+                buttonsContainer.appendChild(previousButton);
+                resultContainer.appendChild(buttonsContainer);
+            } else {
+                // For other modes: Show the original Play Again button
+                const replayButton = document.createElement('button');
+                replayButton.classList.add('replay-button');
+                replayButton.textContent = 'Play Again';
+                replayButton.addEventListener('click', () => {
+                    // If we're in daily mode and it's completed, switch to random mode
+                    if (gameMode === "daily" && checkDailyCompleted()) {
+                        gameMode = "random";
+                        const modeToggle = document.getElementById('mode-toggle');
+                        if (modeToggle) {
+                            modeToggle.innerHTML = "🎲";
+                            modeToggle.title = "Random Play";
+                        }
+                    }
+                    
+                    // Generate a new word based on the current mode
+                    if (gameMode === "daily") {
+                        wordOfTheDay = getDailyWord();
+                    } else if (gameMode === "previous") {
+                        // For previous games, redirect to homepage
+                        window.location.href = "index.html";
+                        return;
+                    } else {
+                        wordOfTheDay = getRandomWord();
+                    }
+                    
+                    restartGame();
+                    document.getElementById('stats-modal').style.display = 'none';
+                });
+                
+                resultContainer.appendChild(replayButton);
+            }
             
             statsContainer.appendChild(resultContainer);
         }

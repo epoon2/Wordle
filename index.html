@@ -382,6 +382,14 @@
             const closeButton = document.getElementById('close-previous');
             const previousList = document.getElementById('previous-list');
             
+            // Check for #previous in URL to auto-open the Previous Wordles modal
+            if (window.location.hash === '#previous') {
+                populatePreviousWordles(previousList, wordleNumber);
+                previousModal.style.display = 'block';
+                // Remove the hash to avoid reopening on refresh
+                history.replaceState(null, null, ' ');
+            }
+            
             // Open Previous Wordles modal
             archiveButton.addEventListener('click', () => {
                 populatePreviousWordles(previousList, wordleNumber);
