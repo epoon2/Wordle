@@ -884,6 +884,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
         const todaysWord = getDailyWord();
         
+        // If the saved word doesn't match today's word, it means the word has changed
+        // (new day) but the completedDailies list wasn't updated
+        if (!savedState.word || savedState.word !== todaysWord) {
+            // Remove today from the completedDailies list since it's a different word now
+            const updatedCompletedDailies = completedDailies.filter(date => date !== today);
+            localStorage.setItem('completedDailies', JSON.stringify(updatedCompletedDailies));
+            
+            // Reset the dailyState since it's for a different word
+            if (savedState.date === today) {
+                localStorage.removeItem('dailyState');
+            }
+            
+            return false;
+        }
+        
         // Only consider it completed if the saved state exists, 
         // is from today, and has the same word as today's word
         return (savedState.date === today && savedState.word === todaysWord);
