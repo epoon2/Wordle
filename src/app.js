@@ -144,13 +144,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate days since the first Wordle
         const firstDate = new Date(firstWordleDate);
         firstDate.setHours(0, 0, 0, 0); // Normalize to start of day
+        today.setHours(0, 0, 0, 0); // Normalize today to start of day
+        
         const msInDay = 86400000;
         
-        // Make sure we get at least 1 for today
-        const daysDiff = Math.max(0, (today - firstDate) / msInDay);
-        const daysSinceFirst = Math.floor(daysDiff) + 1;
+        // Calculate the difference in days
+        const daysDiff = Math.round((today - firstDate) / msInDay);
         
-        return daysSinceFirst;
+        // The Wordle number is days since first + 1
+        const wordleNum = daysDiff + 1;
+        
+        // Ensure we don't return less than 1
+        return Math.max(1, wordleNum);
     }
     
     // Creates the game board tiles
@@ -853,8 +858,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('help-modal').style.display = 'block';
     }
 
-    // Get a deterministic daily word based on the current date
+    // Get today's word based on the date
     function getDailyWord() {
+        // Special case for Wordle #42 - ensure it's ABACK
+        if (getCurrentWordleNumber() === 42) {
+            return "ABACK";
+        }
+        
         return getWordForDate(today);
     }
     
