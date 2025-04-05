@@ -285,9 +285,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add event listener to toggle game mode
         modeToggle.addEventListener('click', () => {
             if (!isGameOver) {
-                // If game in progress, confirm before switching
+                // Game in progress - save the current progress first
                 if (currentRow > 0) {
-                    if (!confirm("Switching modes will reset your current game. Continue?")) {
+                    // Save the current progress
+                    if (gameMode === "daily") {
+                        saveInProgressDailyState();
+                    } else if (gameMode === "previous" && dateParam) {
+                        saveInProgressPreviousState(dateParam);
+                    }
+                    
+                    if (!confirm("Your progress for this game has been saved. Do you want to switch modes?")) {
                         return;
                     }
                 }
@@ -356,13 +363,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 800);
                     }
                 } else {
-                    // Switch to daily mode with new game
+                    // Check for in-progress daily game
+                    const inProgressState = getInProgressDailyState();
+                    
+                    // Switch to daily mode with either in-progress or new game
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
                     modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
                     wordOfTheDay = getDailyWord();
-                    restartGame();
-                    showMessage("Switched to daily challenge mode");
+                    
+                    if (inProgressState) {
+                        // Restore in-progress game
+                        restartGame(); // Clear the board first
+                        restoreDailyState(inProgressState);
+                        showMessage("Restored your in-progress daily game");
+                    } else {
+                        // Start new game
+                        restartGame();
+                        showMessage("Switched to daily challenge mode");
+                    }
                     
                     // Update header if needed
                     const header = document.querySelector('h1');
