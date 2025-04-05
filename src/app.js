@@ -5,9 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateParam = urlParams.get('date');
     const numberParam = urlParams.get('number');
     
+    // Get today's date and initialize the word tracker
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    
     // Set the game mode
     let gameMode = modeParam || 'daily'; // Default mode is daily challenge
-    let wordleNumber = 1; // Today is #1 by default
+    let wordleNumber = getCurrentWordleNumber(); // Calculate the current Wordle number
     
     // Game state variables
     let wordOfTheDay;
@@ -17,16 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameStats = loadStats();
     
     // Update UI to show Wordle number if applicable
-    if (gameMode === 'previous' && numberParam) {
-        wordleNumber = parseInt(numberParam);
-        // Update page title
-        document.title = `Wordle #${wordleNumber}`;
-        // Update header if present
-        const header = document.querySelector('h1');
-        if (header) {
-            header.textContent = `WORDLE #${wordleNumber}`;
-        }
-    }
+    updateWordleNumberUI();
     
     // For 'previous' mode, we use the date parameter
     if (gameMode === 'previous' && dateParam) {
@@ -86,6 +81,48 @@ document.addEventListener('DOMContentLoaded', () => {
         setupKeyboard();
         // Set up UI button listeners
         setupButtons();
+    }
+    
+    // Update the Wordle number in the UI based on mode and parameters
+    function updateWordleNumberUI() {
+        if (gameMode === 'previous' && numberParam) {
+            wordleNumber = parseInt(numberParam);
+            // Update page title
+            document.title = `Wordle #${wordleNumber}`;
+            // Update header if present
+            const header = document.querySelector('h1');
+            if (header) {
+                header.textContent = `WORDLE #${wordleNumber}`;
+            }
+        } else if (gameMode === 'daily') {
+            // For daily mode, show today's number
+            wordleNumber = getCurrentWordleNumber();
+            document.title = `Wordle #${wordleNumber}`;
+            const header = document.querySelector('h1');
+            if (header) {
+                header.textContent = `WORDLE #${wordleNumber}`;
+            }
+        }
+    }
+    
+    // Calculate the current Wordle number based on today's date
+    function getCurrentWordleNumber() {
+        // Check if we have a stored first Wordle date
+        let firstWordleDate = localStorage.getItem('firstWordleDate');
+        
+        if (!firstWordleDate) {
+            // If this is the first time, store today as the first Wordle date
+            firstWordleDate = today.toISOString().split('T')[0];
+            localStorage.setItem('firstWordleDate', firstWordleDate);
+            return 1; // This is Wordle #1
+        }
+        
+        // Calculate days since the first Wordle
+        const firstDate = new Date(firstWordleDate);
+        const msInDay = 86400000;
+        const daysSinceFirst = Math.round((today - firstDate) / msInDay) + 1;
+        
+        return daysSinceFirst;
     }
     
     // Creates the game board tiles
@@ -734,8 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get a deterministic daily word based on the current date
     function getDailyWord() {
-        const now = new Date();
-        return getWordForDate(now);
+        return getWordForDate(today);
     }
     
     // Get a word for a specific past date (for previous Wordles)
@@ -746,21 +782,29 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Get a word for a specific date
     function getWordForDate(date) {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        // We consider "today" as Wordle #1, so start is today
+        // Get the first Wordle date from localStorage
+        const firstWordleDate = localStorage.getItem('firstWordleDate');
+        
+        // If no first date is stored, use today
+        const firstDate = firstWordleDate ? new Date(firstWordleDate) : today;
+        firstDate.setHours(0, 0, 0, 0);
         
         const msInDay = 86400000;
         let daysSinceStart = 0;
         
-        if (date < start) {
-            // If the date is in the past, it's a positive offset from today
-            daysSinceStart = Math.floor((start - date) / msInDay);
+        // Calculate days between the target date and first Wordle date
+        if (date < firstDate) {
+            // Dates before the first Wordle shouldn't be accessible,
+            // but we handle it by using a modulo of the absolute difference
+            daysSinceStart = Math.floor((firstDate - date) / msInDay);
+            daysSinceStart = daysSinceStart % SOLUTION_WORDS.length;
+        } else {
+            // Normal case: date is after or equal to first Wordle
+            daysSinceStart = Math.floor((date - firstDate) / msInDay);
         }
         
-        // Get a word based on the day number (ensuring it cycles through the full word list)
-        // We use the negative of daysSinceStart so that older dates get different words
-        const wordIndex = Math.abs(daysSinceStart % SOLUTION_WORDS.length);
+        // Get a word based on the day number, ensuring it cycles through solution words
+        const wordIndex = daysSinceStart % SOLUTION_WORDS.length;
         return SOLUTION_WORDS[wordIndex];
     }
     

@@ -43,8 +43,21 @@
         h1 {
             font-size: 4rem;
             font-weight: 700;
-            margin-bottom: 1.5rem;
+            margin-bottom: 0.5rem;
             letter-spacing: 2px;
+        }
+        
+        .author {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+        
+        .current-date {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            color: #3a3a3c;
         }
 
         p {
@@ -96,6 +109,100 @@
 
         .play-button.archive-button {
             background-color: var(--color-absent);
+        }
+        
+        /* Previous Wordles modal */
+        .previous-modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s;
+        }
+        
+        .previous-modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 23px 0 rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .previous-modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .previous-modal-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .previous-modal-header p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0;
+        }
+        
+        .close-button {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .previous-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 0 10px;
+        }
+        
+        .previous-wordle-btn {
+            background-color: var(--color-absent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            text-align: center;
+        }
+        
+        .previous-wordle-btn:hover {
+            transform: translateY(-2px);
+            background-color: #5f6367;
+        }
+        
+        .previous-wordle-btn .number {
+            font-size: 1.1rem;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .previous-wordle-btn .date {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         .archive-selector {
@@ -200,12 +307,18 @@
                 height: 50px;
                 font-size: 1.5rem;
             }
+            
+            .previous-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
 <body>
     <div class="home-container">
         <h1>WORDLE</h1>
+        <div class="author">By: Ethan Poon</div>
+        <div id="current-date" class="current-date"></div>
         
         <div class="tiles-animation">
             <div class="home-tile correct">W</div>
@@ -220,7 +333,7 @@
         <div class="play-buttons">
             <a href="game.html?mode=daily" class="play-button daily-button">
                 <span class="mode-icon">📅</span>
-                <span>Today's Wordle (#1)</span>
+                <span>Today's Wordle (#<span id="today-number">1</span>)</span>
             </a>
             <a href="game.html?mode=random" class="play-button random-button">
                 <span class="mode-icon">🎲</span>
@@ -230,78 +343,122 @@
                 <span class="mode-icon">🗓️</span>
                 <span>Previous Wordles</span>
             </button>
-            
-            <div id="archive-selector" class="archive-selector">
-                <div class="wordle-number-input">
-                    <label for="wordle-number">Wordle #</label>
-                    <input type="number" id="wordle-number" min="2" max="365" value="2">
-                    <button id="go-button" class="go-button">Go</button>
-                </div>
-                <div id="wordle-date" class="wordle-date">
-                    From yesterday
-                </div>
+        </div>
+    </div>
+    
+    <!-- Previous Wordles Modal -->
+    <div id="previous-modal" class="previous-modal">
+        <div class="previous-modal-content">
+            <span class="close-button" id="close-previous">&times;</span>
+            <div class="previous-modal-header">
+                <h2>Previous Wordles</h2>
+                <p>Select a previous puzzle to play</p>
+            </div>
+            <div id="previous-list" class="previous-list">
+                <!-- List of previous wordles will be added here -->
             </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const archiveButton = document.getElementById('archive-button');
-            const archiveSelector = document.getElementById('archive-selector');
-            const wordleNumber = document.getElementById('wordle-number');
-            const wordleDate = document.getElementById('wordle-date');
-            const goButton = document.getElementById('go-button');
-            
-            // Set the max number based on days since the first Wordle
+            // Set current date
             const today = new Date();
-            const firstDay = new Date();
-            firstDay.setDate(today.getDate() - 1); // Yesterday was #2
-            const daysSinceStart = Math.floor((today - firstDay) / (1000 * 60 * 60 * 24)) + 1;
-            wordleNumber.max = daysSinceStart;
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('current-date').textContent = today.toLocaleDateString(undefined, options);
             
-            // Toggle archive selector
+            // Calculate today's Wordle number (assuming #1 is today)
+            const wordleNumber = calculateWordleNumber(today);
+            document.getElementById('today-number').textContent = wordleNumber;
+            
+            // Previous Wordles Modal Elements
+            const archiveButton = document.getElementById('archive-button');
+            const previousModal = document.getElementById('previous-modal');
+            const closeButton = document.getElementById('close-previous');
+            const previousList = document.getElementById('previous-list');
+            
+            // Open Previous Wordles modal
             archiveButton.addEventListener('click', () => {
-                archiveSelector.classList.toggle('active');
+                populatePreviousWordles(previousList, wordleNumber);
+                previousModal.style.display = 'block';
             });
             
-            // Update date preview when number changes
-            wordleNumber.addEventListener('change', updateDatePreview);
-            wordleNumber.addEventListener('input', updateDatePreview);
+            // Close Previous Wordles modal
+            closeButton.addEventListener('click', () => {
+                previousModal.style.display = 'none';
+            });
             
-            // Handle go button click
-            goButton.addEventListener('click', () => {
-                const number = parseInt(wordleNumber.value);
-                if (number >= 2 && number <= daysSinceStart) {
-                    // Calculate the date from the Wordle number
-                    const date = new Date(today);
-                    date.setDate(today.getDate() - (number - 1));
-                    const dateStr = date.toISOString().split('T')[0];
-                    
-                    // Navigate to the game with the specified date
-                    window.location.href = `game.html?mode=previous&date=${dateStr}&number=${number}`;
+            // Close when clicking outside the modal
+            window.addEventListener('click', (event) => {
+                if (event.target === previousModal) {
+                    previousModal.style.display = 'none';
                 }
             });
             
-            // Initial date preview update
-            updateDatePreview();
+            // Function to calculate the current Wordle number
+            function calculateWordleNumber(date) {
+                // Check if we have a stored first Wordle date
+                let firstWordleDate = localStorage.getItem('firstWordleDate');
+                
+                if (!firstWordleDate) {
+                    // If this is the first time, store today as the first Wordle date
+                    firstWordleDate = today.toISOString().split('T')[0];
+                    localStorage.setItem('firstWordleDate', firstWordleDate);
+                    return 1; // This is Wordle #1
+                }
+                
+                // Calculate days since the first Wordle
+                const firstDate = new Date(firstWordleDate);
+                const msInDay = 86400000;
+                const daysSinceFirst = Math.round((today - firstDate) / msInDay) + 1;
+                
+                return daysSinceFirst;
+            }
             
-            // Function to update the date preview
-            function updateDatePreview() {
-                const number = parseInt(wordleNumber.value);
-                if (number >= 2 && number <= daysSinceStart) {
-                    // Calculate the date from the Wordle number
+            // Function to populate the previous Wordles list
+            function populatePreviousWordles(container, currentNumber) {
+                container.innerHTML = '';
+                
+                // If today is #1, there are no previous Wordles
+                if (currentNumber <= 1) {
+                    const message = document.createElement('p');
+                    message.style.gridColumn = '1 / span 3';
+                    message.style.textAlign = 'center';
+                    message.style.padding = '20px';
+                    message.textContent = 'No previous Wordles yet. Check back tomorrow!';
+                    container.appendChild(message);
+                    return;
+                }
+                
+                // Create buttons for previous Wordles (#1 to #current-1)
+                for (let i = currentNumber - 1; i >= 1; i--) {
                     const date = new Date(today);
-                    date.setDate(today.getDate() - (number - 1));
-                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-                    const formattedDate = date.toLocaleDateString(undefined, options);
+                    date.setDate(today.getDate() - (currentNumber - i));
                     
-                    if (number === 2) {
-                        wordleDate.textContent = `From yesterday (${formattedDate})`;
-                    } else {
-                        wordleDate.textContent = `From ${formattedDate}`;
-                    }
-                } else {
-                    wordleDate.textContent = 'Invalid number';
+                    const dateStr = date.toISOString().split('T')[0];
+                    const formattedDate = date.toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    
+                    const button = document.createElement('button');
+                    button.className = 'previous-wordle-btn';
+                    button.innerHTML = `
+                        <span class="number">#${i}</span>
+                        <span class="date">${formattedDate}</span>
+                    `;
+                    
+                    button.addEventListener('click', () => {
+                        window.location.href = `game.html?mode=previous&date=${dateStr}&number=${i}`;
+                    });
+                    
+                    container.appendChild(button);
                 }
             }
         });
