@@ -283,7 +283,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Add event listener to toggle game mode
-        modeToggle.addEventListener('click', () => {
+        modeToggle.addEventListener('click', (event) => {
+            // Important: Prevent this event from triggering on Enter key presses 
+            // that are meant for guess submission
+            if (event.detail === 0 && event.key === 'Enter') {
+                // This was triggered by Enter key, not a mouse click
+                // Prevent it from running during gameplay
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            
             if (!isGameOver) {
                 // Game in progress - save the current progress first
                 if (currentRow > 0) {
@@ -414,14 +424,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('keydown', (e) => {
             if (isGameOver) return;
             
+            // Prevent default behavior for Enter key to avoid triggering buttons
             if (e.key === 'Enter') {
+                e.preventDefault();
                 handleKeyPress('enter');
-            } else if (e.key === 'Backspace') {
+                return;
+            } 
+            
+            if (e.key === 'Backspace') {
                 handleKeyPress('del');
             } else if (/^[a-zA-Z]$/.test(e.key)) {
                 handleKeyPress(e.key.toLowerCase());
             }
-        });
+        }, true); // Use capture phase to handle this event first
     }
     
     // Handle key presses
@@ -969,21 +984,32 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTile = 0;
         isGameOver = false;
         
-        // Clear the board
+        // Clear the board - completely reset all tiles
         for (let i = 0; i < 6; i++) {
             for (let j = 0; j < 5; j++) {
                 const tile = document.getElementById(`tile-${i}-${j}`);
                 tile.textContent = '';
-                tile.classList.remove('tile-filled', 'correct', 'present', 'absent');
+                // Remove ALL possible classes that might be on the tile
+                tile.className = 'tile'; // Reset to only the base 'tile' class
                 tile.dataset.state = 'empty';
                 tile.dataset.letter = '';
             }
         }
         
-        // Reset keyboard
+        // Completely reset the keyboard
         const keys = document.querySelectorAll('#keyboard-container button');
         keys.forEach(key => {
-            key.classList.remove('correct', 'present', 'absent');
+            // Remove ALL color classes while preserving the needed keyboard button classes
+            // First get the key type
+            const keyType = key.dataset.key;
+            
+            // Remove all classes
+            key.className = '';
+            
+            // Add back only the necessary class based on key type
+            if (keyType === 'enter' || keyType === 'del') {
+                key.classList.add('wide-button');
+            }
         });
         
         // Clear messages
@@ -1093,21 +1119,32 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restore the state of a previously played daily challenge
     function restoreDailyState(state) {
-        // First clear the board (just to be safe)
+        // Use the same thorough board cleaning as in restartGame
+        // First clear the board completely
         for (let i = 0; i < 6; i++) {
             for (let j = 0; j < 5; j++) {
                 const tile = document.getElementById(`tile-${i}-${j}`);
                 tile.textContent = '';
-                tile.classList.remove('tile-filled', 'correct', 'present', 'absent');
+                // Reset to only the base 'tile' class
+                tile.className = 'tile';
                 tile.dataset.state = 'empty';
                 tile.dataset.letter = '';
             }
         }
         
-        // Reset keyboard
+        // Reset keyboard thoroughly
         const keys = document.querySelectorAll('#keyboard-container button');
         keys.forEach(key => {
-            key.classList.remove('correct', 'present', 'absent');
+            // Get the key type
+            const keyType = key.dataset.key;
+            
+            // Remove all classes
+            key.className = '';
+            
+            // Add back only the necessary class based on key type
+            if (keyType === 'enter' || keyType === 'del') {
+                key.classList.add('wide-button');
+            }
         });
         
         // Replay the guesses
@@ -1133,22 +1170,32 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restore the state of a previously played previous Wordle
     function restorePreviousState(state) {
-        // Same implementation as restoreDailyState
-        // First clear the board (just to be safe)
+        // Use the same thorough board cleaning as in restartGame
+        // First clear the board completely
         for (let i = 0; i < 6; i++) {
             for (let j = 0; j < 5; j++) {
                 const tile = document.getElementById(`tile-${i}-${j}`);
                 tile.textContent = '';
-                tile.classList.remove('tile-filled', 'correct', 'present', 'absent');
+                // Reset to only the base 'tile' class
+                tile.className = 'tile';
                 tile.dataset.state = 'empty';
                 tile.dataset.letter = '';
             }
         }
         
-        // Reset keyboard
+        // Reset keyboard thoroughly
         const keys = document.querySelectorAll('#keyboard-container button');
         keys.forEach(key => {
-            key.classList.remove('correct', 'present', 'absent');
+            // Get the key type
+            const keyType = key.dataset.key;
+            
+            // Remove all classes
+            key.className = '';
+            
+            // Add back only the necessary class based on key type
+            if (keyType === 'enter' || keyType === 'del') {
+                key.classList.add('wide-button');
+            }
         });
         
         // Replay the guesses
