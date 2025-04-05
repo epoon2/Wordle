@@ -201,6 +201,22 @@
             opacity: 0.9;
         }
         
+        .previous-wordle-btn .status {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .previous-wordle-btn.completed {
+            position: relative;
+        }
+        
+        .previous-wordle-btn.completed:hover {
+            background-color: var(--color-correct) !important;
+            opacity: 0.9;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -657,6 +673,9 @@
                     return;
                 }
                 
+                // Get the completed previous Wordles list
+                const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+                
                 // Create buttons for previous Wordles (#1 to #current-1)
                 for (let i = currentNumber - 1; i >= 1; i--) {
                     const date = new Date(today);
@@ -671,9 +690,25 @@
                     
                     const button = document.createElement('button');
                     button.className = 'previous-wordle-btn';
+                    
+                    // Check if this Wordle has been completed
+                    const isCompleted = completedPrevious.includes(dateStr);
+                    if (isCompleted) {
+                        button.classList.add('completed');
+                        button.style.backgroundColor = 'var(--color-correct)';
+                        
+                        // Get the saved state to show if they won or lost
+                        const savedState = JSON.parse(localStorage.getItem(`wordle_${dateStr}`) || '{}');
+                        if (savedState && savedState.won === false) {
+                            // They lost this one
+                            button.style.backgroundColor = '#888'; // Dark gray for losses
+                        }
+                    }
+                    
                     button.innerHTML = `
                         <span class="number">#${i}</span>
                         <span class="date">${formattedDate}</span>
+                        ${isCompleted ? '<span class="status">✓</span>' : ''}
                     `;
                     
                     button.addEventListener('click', () => {

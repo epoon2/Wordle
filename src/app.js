@@ -31,10 +31,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get the specific word for that date
         wordOfTheDay = getPreviousWord(dateParam);
         
-        // Create the game board
-        createBoard();
-        setupKeyboard();
-        setupButtons();
+        // Check if this previous wordle has been completed
+        const previousCompleted = checkPreviousCompleted(dateParam);
+        if (previousCompleted) {
+            const savedState = getPreviousState(dateParam);
+            showMessage("You've already completed this Wordle!");
+            isGameOver = true;
+            
+            // Create the game board first (we'll restore state after)
+            createBoard();
+            setupKeyboard();
+            setupButtons();
+            
+            // Restore the previously played game state
+            if (savedState) {
+                restorePreviousState(savedState);
+                // Show the stats modal after a short delay
+                setTimeout(() => {
+                    displayStats();
+                }, 800);
+            } else {
+                // If no saved state (unlikely), switch to random mode
+                gameMode = "random";
+                wordOfTheDay = getRandomWord();
+            }
+        } else {
+            // Create the game board
+            createBoard();
+            setupKeyboard();
+            setupButtons();
+        }
     } else if (gameMode === 'daily') {
         // Get today's word
         wordOfTheDay = getDailyWord();
@@ -415,6 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 markDailyCompleted();
                 saveDailyState();
             }
+            // If in previous mode, mark as completed and save the state
+            else if (gameMode === "previous" && dateParam) {
+                savePreviousState(dateParam);
+            }
             
             saveStats(gameStats);
             
@@ -431,6 +461,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // If in daily mode, still save the loss state
             if (gameMode === "daily") {
                 saveDailyState();
+            }
+            // If in previous mode, still save the loss state
+            else if (gameMode === "previous" && dateParam) {
+                savePreviousState(dateParam);
             }
             
             setTimeout(() => {
@@ -1002,8 +1036,109 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
     
+    // Save the state of a previous Wordle
+    function savePreviousState(dateStr) {
+        // Collect all the guesses
+        const guesses = [];
+        for (let i = 0; i <= currentRow; i++) {
+            let rowGuess = '';
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                rowGuess += tile.dataset.letter || '';
+            }
+            if (rowGuess.length === 5) {
+                guesses.push(rowGuess);
+            }
+        }
+        
+        // Save the board state and results
+        const state = {
+            guesses: guesses,
+            date: dateStr,
+            word: wordOfTheDay,
+            won: wordOfTheDay === guesses[guesses.length - 1]
+        };
+        
+        localStorage.setItem(`wordle_${dateStr}`, JSON.stringify(state));
+        
+        // Also add to completed previous wordles
+        const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+        if (!completedPrevious.includes(dateStr)) {
+            completedPrevious.push(dateStr);
+            localStorage.setItem('completedPreviousWordles', JSON.stringify(completedPrevious));
+        }
+    }
+    
+    // Get the saved state of a previous Wordle
+    function getPreviousState(dateStr) {
+        const savedState = JSON.parse(localStorage.getItem(`wordle_${dateStr}`) || '{}');
+        
+        // Check if the saved state is valid
+        if (savedState.date === dateStr && savedState.guesses && savedState.guesses.length > 0) {
+            return savedState;
+        }
+        
+        return null;
+    }
+    
+    // Check if a previous Wordle has been completed
+    function checkPreviousCompleted(dateStr) {
+        const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+        return completedPrevious.includes(dateStr);
+    }
+    
+    // Mark a previous Wordle as completed
+    function markPreviousCompleted(dateStr) {
+        const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+        if (!completedPrevious.includes(dateStr)) {
+            completedPrevious.push(dateStr);
+            localStorage.setItem('completedPreviousWordles', JSON.stringify(completedPrevious));
+        }
+    }
+    
     // Restore the state of a previously played daily challenge
     function restoreDailyState(state) {
+        // First clear the board (just to be safe)
+        for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                tile.textContent = '';
+                tile.classList.remove('tile-filled', 'correct', 'present', 'absent');
+                tile.dataset.state = 'empty';
+                tile.dataset.letter = '';
+            }
+        }
+        
+        // Reset keyboard
+        const keys = document.querySelectorAll('#keyboard-container button');
+        keys.forEach(key => {
+            key.classList.remove('correct', 'present', 'absent');
+        });
+        
+        // Replay the guesses
+        for (let i = 0; i < state.guesses.length; i++) {
+            const guess = state.guesses[i];
+            
+            // Fill in the row
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                tile.textContent = guess[j];
+                tile.classList.add('tile-filled');
+                tile.dataset.letter = guess[j];
+            }
+            
+            // Check the guess to apply coloring
+            checkGuess(guess, i);
+        }
+        
+        // Update the currentRow
+        currentRow = state.guesses.length;
+        currentTile = 0;
+    }
+    
+    // Restore the state of a previously played previous Wordle
+    function restorePreviousState(state) {
+        // Same implementation as restoreDailyState
         // First clear the board (just to be safe)
         for (let i = 0; i < 6; i++) {
             for (let j = 0; j < 5; j++) {
