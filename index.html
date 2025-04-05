@@ -700,8 +700,8 @@
                         // Get the saved state to show if they won or lost
                         const savedState = JSON.parse(localStorage.getItem(`wordle_${dateStr}`) || '{}');
                         if (savedState && savedState.won === false) {
-                            // They lost this one
-                            button.style.backgroundColor = '#888'; // Dark gray for losses
+                            // They lost this one - use red instead of dark gray
+                            button.style.backgroundColor = '#e76161'; // Red color for losses
                         }
                     }
                     
