@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to start of day
     
+    // Check if we need to reset the firstWordleDate
+    initializeWordleDate();
+    
     // Set the game mode
     let gameMode = modeParam || 'daily'; // Default mode is daily challenge
     let wordleNumber = getCurrentWordleNumber(); // Calculate the current Wordle number
@@ -87,17 +90,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateWordleNumberUI() {
         if (gameMode === 'previous' && numberParam) {
             wordleNumber = parseInt(numberParam);
-            // Update page title
-            document.title = `Wordle #${wordleNumber}`;
-            // Update header if present
-            const header = document.querySelector('h1');
-            if (header) {
-                header.textContent = `WORDLE #${wordleNumber}`;
-            }
         } else if (gameMode === 'daily') {
             // For daily mode, show today's number
             wordleNumber = getCurrentWordleNumber();
+        }
+        
+        // Update title and header with the current wordle number
+        if (wordleNumber > 0) {
             document.title = `Wordle #${wordleNumber}`;
+            // Update header if present
             const header = document.querySelector('h1');
             if (header) {
                 header.textContent = `WORDLE #${wordleNumber}`;
@@ -119,8 +120,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Calculate days since the first Wordle
         const firstDate = new Date(firstWordleDate);
+        firstDate.setHours(0, 0, 0, 0); // Normalize to start of day
         const msInDay = 86400000;
-        const daysSinceFirst = Math.round((today - firstDate) / msInDay) + 1;
+        
+        // Make sure we get at least 1 for today
+        const daysDiff = Math.max(0, (today - firstDate) / msInDay);
+        const daysSinceFirst = Math.floor(daysDiff) + 1;
         
         return daysSinceFirst;
     }
@@ -933,5 +938,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update the currentRow
         currentRow = state.guesses.length;
         currentTile = 0;
+    }
+
+    // Function to initialize or fix the firstWordleDate if needed
+    function initializeWordleDate() {
+        const calculatedNumber = getCurrentWordleNumber();
+        
+        // If we're getting 0 or a negative number, reset the firstWordleDate
+        if (calculatedNumber <= 0) {
+            localStorage.removeItem('firstWordleDate');
+            localStorage.setItem('firstWordleDate', today.toISOString().split('T')[0]);
+        }
     }
 }); 
