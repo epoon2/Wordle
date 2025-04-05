@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize or fix the firstWordleDate if needed
+    initializeWordleDate();
+    
     // Get mode and date parameters from URL
     const urlParams = new URLSearchParams(window.location.search);
     const modeParam = urlParams.get('mode');
@@ -8,9 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Get today's date and initialize the word tracker
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to start of day
-    
-    // Check if we need to reset the firstWordleDate
-    initializeWordleDate();
     
     // Set the game mode
     let gameMode = modeParam || 'daily'; // Default mode is daily challenge
