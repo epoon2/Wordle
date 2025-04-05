@@ -727,6 +727,14 @@
     </div>
     
     <script>
+        // Check if URL has #previous hash to automatically open the Previous Wordles modal
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.location.hash === '#previous') {
+                console.log('Opening Previous Wordles modal...');
+                document.getElementById('previous-modal').style.display = 'block';
+            }
+        });
+        
         // Add click handler for the admin button
         document.getElementById('admin-init').addEventListener('click', function() {
             if (confirm('Initialize Wordle history to make today #42? This will set up 41 previous Wordles.')) {
