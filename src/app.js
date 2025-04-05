@@ -295,17 +295,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (!isGameOver) {
-                // Game in progress - save the current progress first
+                // Game in progress
                 if (currentRow > 0) {
-                    // Save the current progress
+                    // Only save progress for daily and previous modes (not random)
+                    let progressSaved = false;
+                    
                     if (gameMode === "daily") {
                         saveInProgressDailyState();
+                        progressSaved = true;
                     } else if (gameMode === "previous" && dateParam) {
                         saveInProgressPreviousState(dateParam);
+                        progressSaved = true;
                     }
                     
-                    if (!confirm("Your progress for this game has been saved. Do you want to switch modes?")) {
-                        return;
+                    // Only show "progress saved" message for modes where we actually save progress
+                    if (progressSaved) {
+                        if (!confirm("Your progress for this game has been saved. Do you want to switch modes?")) {
+                            return;
+                        }
+                    } else {
+                        // For random mode, just confirm without mentioning saving
+                        if (!confirm("Do you want to switch modes? Your current game will be lost.")) {
+                            return;
+                        }
                     }
                 }
             }
