@@ -1,16 +1,26 @@
+// Make today a global variable so it can be accessed by all functions
+let today;
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize today's date first, since other functions depend on it
+    today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    
     // Initialize or fix the firstWordleDate if needed
-    initializeWordleDate();
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceInit = urlParams.get('force_init') === 'true';
+    
+    if (forceInit) {
+        console.log("Force initialization requested via URL parameter");
+        autoInitializeWordleHistory();
+    } else {
+        initializeWordleDate();
+    }
     
     // Get mode and date parameters from URL
-    const urlParams = new URLSearchParams(window.location.search);
     const modeParam = urlParams.get('mode');
     const dateParam = urlParams.get('date');
     const numberParam = urlParams.get('number');
-    
-    // Get today's date and initialize the word tracker
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to start of day
     
     // Set the game mode
     let gameMode = modeParam || 'daily'; // Default mode is daily challenge
@@ -1087,97 +1097,130 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to initialize or fix the firstWordleDate if needed
     function initializeWordleDate() {
+        console.log("Checking if Wordle initialization is needed...");
+        
+        // Versioning to ensure updates get applied
+        const currentVersion = "1.0";
+        const storedVersion = localStorage.getItem('wordleVersion');
+        
         const calculatedNumber = getCurrentWordleNumber();
         const firstWordleDate = localStorage.getItem('firstWordleDate');
         
-        // If no firstWordleDate is set or we're getting incorrect numbers, initialize properly
-        if (!firstWordleDate || calculatedNumber <= 0 || calculatedNumber > 50) {
+        // If no firstWordleDate is set, we're getting incorrect numbers, or version has changed
+        if (!firstWordleDate || calculatedNumber <= 0 || calculatedNumber > 50 || storedVersion !== currentVersion) {
+            console.log("Initialization needed. Current number:", calculatedNumber, "Stored version:", storedVersion);
             // We want to make sure today is Wordle #42 with ABACK as the solution
-            autoInitializeWordleHistory();
+            const result = autoInitializeWordleHistory();
+            if (result) {
+                localStorage.setItem('wordleVersion', currentVersion);
+                console.log("Initialization complete and version updated to", currentVersion);
+            }
+        } else {
+            console.log("No initialization needed. Current Wordle #:", calculatedNumber);
         }
     }
 
     // Automatically initialize Wordle history for all visitors if needed
     function autoInitializeWordleHistory() {
-        console.log("Auto-initializing Wordle history...");
-        
-        // Calculate the date for Wordle #1 (41 days before today)
-        const firstWordleDate = new Date(today);
-        firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
-        firstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
-        
-        // Verify calculation with milliseconds for accuracy
-        const msInDay = 86400000;
-        const checkDiff = Math.round((today - firstWordleDate) / msInDay);
-        
-        if (checkDiff !== 41) {
-            // Adjust date manually to ensure exactly 41 days difference
-            firstWordleDate.setTime(today.getTime() - (41 * msInDay));
-            console.log("Adjusted first date calculation to ensure 41 days difference");
-        }
-        
-        // Store the first Wordle date
-        localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
-        console.log(`Set firstWordleDate to ${firstWordleDate.toISOString()}`);
-        
-        // Create word overrides to ensure consistent solution words
-        const wordOverrides = {};
-        
-        // Assign word overrides for previous dates (use a deterministic algorithm)
-        const prime = 31;
-        for (let i = 0; i < 41; i++) {
-            const date = new Date(firstWordleDate);
-            date.setDate(firstWordleDate.getDate() + i);
+        try {
+            console.log("Auto-initializing Wordle history...");
             
-            const dateString = date.toISOString().split('T')[0];
+            // Calculate the date for Wordle #1 (41 days before today)
+            const firstWordleDate = new Date(today);
+            firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
+            firstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
             
-            // Get a word using a deterministic algorithm (different from the default algorithm)
-            // This ensures consistent word selection across all user devices
-            const wordIndex = (i * prime) % SOLUTION_WORDS.length;
-            const word = SOLUTION_WORDS[wordIndex];
+            // Verify calculation with milliseconds for accuracy
+            const msInDay = 86400000;
+            const checkDiff = Math.round((today - firstWordleDate) / msInDay);
             
-            // Skip ABACK since we're reserving it for today (#42)
-            if (word !== 'ABACK') {
-                wordOverrides[dateString] = word;
-            } else {
-                // Use the next word if we hit ABACK
-                wordOverrides[dateString] = SOLUTION_WORDS[(wordIndex + 1) % SOLUTION_WORDS.length];
+            console.log(`Calculated date for Wordle #1: ${firstWordleDate.toISOString()}`);
+            console.log(`Days difference check: ${checkDiff} (should be 41)`);
+            
+            if (checkDiff !== 41) {
+                // Adjust date manually to ensure exactly 41 days difference
+                firstWordleDate.setTime(today.getTime() - (41 * msInDay));
+                console.log("Adjusted first date calculation to ensure 41 days difference");
+                console.log(`New date for Wordle #1: ${firstWordleDate.toISOString()}`);
             }
-        }
-        
-        // Set today's word to ABACK explicitly
-        const todayString = today.toISOString().split('T')[0];
-        wordOverrides[todayString] = 'ABACK';
-        
-        // Store word overrides
-        localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
-        console.log("Word overrides stored successfully");
-        
-        // Clear any existing completed games
-        localStorage.removeItem('completedDailies');
-        localStorage.removeItem('completedPreviousWordles');
-        
-        // For returning visitors who may have stats, preserve them
-        // For new visitors, initialize empty stats
-        if (!localStorage.getItem('wordleStats')) {
-            const stats = {
-                gamesPlayed: 0,
-                gamesWon: 0,
-                currentStreak: 0,
-                maxStreak: 0,
-                guesses: {
-                    1: 0,
-                    2: 0,
-                    3: 0,
-                    4: 0,
-                    5: 0,
-                    6: 0
+            
+            // Store the first Wordle date
+            localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
+            console.log(`Set firstWordleDate to ${firstWordleDate.toISOString()}`);
+            
+            // Create word overrides to ensure consistent solution words
+            const wordOverrides = {};
+            
+            // Make sure SOLUTION_WORDS is defined and accessible
+            if (!SOLUTION_WORDS || SOLUTION_WORDS.length === 0) {
+                console.error("SOLUTION_WORDS is not defined or empty!");
+                return false;
+            }
+            
+            console.log(`Using ${SOLUTION_WORDS.length} solution words as base`);
+            
+            // Assign word overrides for previous dates (use a deterministic algorithm)
+            const prime = 31;
+            for (let i = 0; i < 41; i++) {
+                const date = new Date(firstWordleDate);
+                date.setDate(firstWordleDate.getDate() + i);
+                
+                const dateString = date.toISOString().split('T')[0];
+                
+                // Get a word using a deterministic algorithm (different from the default algorithm)
+                // This ensures consistent word selection across all user devices
+                const wordIndex = (i * prime) % SOLUTION_WORDS.length;
+                const word = SOLUTION_WORDS[wordIndex];
+                
+                // Skip ABACK since we're reserving it for today (#42)
+                if (word !== 'ABACK') {
+                    wordOverrides[dateString] = word;
+                } else {
+                    // Use the next word if we hit ABACK
+                    wordOverrides[dateString] = SOLUTION_WORDS[(wordIndex + 1) % SOLUTION_WORDS.length];
                 }
-            };
-            localStorage.setItem('wordleStats', JSON.stringify(stats));
+            }
+            
+            // Set today's word to ABACK explicitly
+            const todayString = today.toISOString().split('T')[0];
+            wordOverrides[todayString] = 'ABACK';
+            
+            // Store word overrides
+            localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+            console.log("Word overrides stored successfully with", Object.keys(wordOverrides).length, "dates");
+            
+            // Clear any existing completed games
+            localStorage.removeItem('completedDailies');
+            localStorage.removeItem('completedPreviousWordles');
+            
+            // For returning visitors who may have stats, preserve them
+            // For new visitors, initialize empty stats
+            if (!localStorage.getItem('wordleStats')) {
+                const stats = {
+                    gamesPlayed: 0,
+                    gamesWon: 0,
+                    currentStreak: 0,
+                    maxStreak: 0,
+                    guesses: {
+                        1: 0,
+                        2: 0,
+                        3: 0,
+                        4: 0,
+                        5: 0,
+                        6: 0
+                    }
+                };
+                localStorage.setItem('wordleStats', JSON.stringify(stats));
+            }
+            
+            // Show message that initialization was successful
+            console.log("Wordle history initialization complete! Today is Wordle #42");
+            
+            return true;
+        } catch (error) {
+            console.error("Error during initialization:", error);
+            return false;
         }
-        
-        return true;
     }
 
     // Get or initialize game statistics
@@ -1199,11 +1242,3 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
-
-// Initialize the game
-window.addEventListener('DOMContentLoaded', init);
-
-// Expose necessary functions to the global scope for admin tools
-window.gameApp = {
-    getWordForDate: getWordForDate
-};
