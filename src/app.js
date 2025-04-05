@@ -1,6 +1,11 @@
 // Make today a global variable so it can be accessed by all functions
 let today;
 
+// Global array to track all animation timeouts
+let animationTimeouts = [];
+// Track stats display timeouts separately
+let statsTimeouts = [];
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize today's date first, since other functions depend on it
     today = new Date();
@@ -60,9 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (savedState) {
                 restorePreviousState(savedState);
                 // Show the stats modal after a short delay
-                setTimeout(() => {
+                const statsDelayId = setTimeout(() => {
                     displayStats();
                 }, 800);
+                statsTimeouts.push(statsDelayId);
             } else {
                 // If no saved state (unlikely), switch to random mode
                 gameMode = "random";
@@ -119,9 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (savedState) {
                 restoreDailyState(savedState);
                 // Show the stats modal after a short delay
-                setTimeout(() => {
+                const statsDelayId = setTimeout(() => {
                     displayStats();
                 }, 800);
+                statsTimeouts.push(statsDelayId);
             } else {
                 // If no saved state (unlikely), switch to random mode
                 gameMode = "random";
@@ -294,6 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
+            // Cancel any pending animations to prevent color transfer
+            cancelAnimations();
+            
             if (!isGameOver) {
                 // Game in progress
                 if (currentRow > 0) {
@@ -330,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modeToggle.title = "Random Play";
                 wordOfTheDay = getRandomWord();
                 restartGame();
+                isGameOver = false; // Explicitly reset game over flag
                 showMessage("Switched to random play mode");
                 
                 // Update header if needed - random mode has no number
@@ -345,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 modeToggle.title = "Random Play";
                 wordOfTheDay = getRandomWord();
                 restartGame();
+                isGameOver = false; // Explicitly reset game over flag
                 showMessage("Switched to random play mode");
                 
                 // Update header if needed - random mode has no number
@@ -380,9 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.title = `Wordle #${getCurrentWordleNumber()}`;
                         
                         // Show the stats modal after a short delay
-                        setTimeout(() => {
+                        const statsDelayId = setTimeout(() => {
                             displayStats();
                         }, 800);
+                        statsTimeouts.push(statsDelayId);
                     }
                 } else {
                     // Check for in-progress daily game
@@ -531,10 +544,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             saveStats(gameStats);
             
-            setTimeout(() => {
+            const winTimeoutId = setTimeout(() => {
                 showMessage("You win!");
                 displayStats();
             }, 1500);
+            
+            // Track this timeout
+            statsTimeouts.push(winTimeoutId);
             
             isGameOver = true;
         } else if (currentRow >= 5) { // Check if this is the last row (index 5)
@@ -550,10 +566,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 savePreviousState(dateParam);
             }
             
-            setTimeout(() => {
+            const loseTimeoutId = setTimeout(() => {
                 showMessage(`Game over!`);
                 displayStats();
             }, 1500);
+            
+            // Track this timeout
+            statsTimeouts.push(loseTimeoutId);
             
             isGameOver = true;
         } else {
@@ -597,11 +616,34 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Apply the results with an animation - use the provided row index
         for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
+            // Store the timeout ID so we can cancel it if needed
+            const timeoutId = setTimeout(() => {
                 const tile = document.getElementById(`tile-${rowIndex}-${i}`);
                 tile.classList.add(results[i]);
                 updateKeyboardKey(guess[i], results[i]);
             }, i * 250);
+            
+            // Add this timeout to our tracking array
+            animationTimeouts.push(timeoutId);
+        }
+    }
+    
+    // Cancel all pending animations
+    function cancelAnimations() {
+        // Clear animation timeouts
+        while (animationTimeouts.length > 0) {
+            clearTimeout(animationTimeouts.pop());
+        }
+        
+        // Clear stats timeouts
+        while (statsTimeouts.length > 0) {
+            clearTimeout(statsTimeouts.pop());
+        }
+        
+        // Also hide stats modal if it's showing
+        const statsModal = document.getElementById('stats-modal');
+        if (statsModal) {
+            statsModal.style.display = 'none';
         }
     }
     
@@ -991,6 +1033,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restart the game
     function restartGame() {
+        cancelAnimations();
+        
         // Reset game state
         currentRow = 0;
         currentTile = 0;
@@ -1131,6 +1175,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restore the state of a previously played daily challenge
     function restoreDailyState(state) {
+        cancelAnimations();
+        
         // Use the same thorough board cleaning as in restartGame
         // First clear the board completely
         for (let i = 0; i < 6; i++) {
@@ -1182,6 +1228,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restore the state of a previously played previous Wordle
     function restorePreviousState(state) {
+        cancelAnimations();
+        
         // Use the same thorough board cleaning as in restartGame
         // First clear the board completely
         for (let i = 0; i < 6; i++) {
@@ -1361,21 +1409,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get or initialize game statistics
     function getStats() {
-        // Use the current gameStats, or create a new object if not available
-        return {
-            gamesPlayed: gameStats.gamesPlayed || 0,
-            gamesWon: gameStats.gamesWon || 0,
-            currentStreak: gameStats.currentStreak || 0,
-            maxStreak: gameStats.maxStreak || 0,
-            guessDistribution: gameStats.guesses || {
-                1: 0,
-                2: 0,
-                3: 0,
-                4: 0,
-                5: 0,
-                6: 0
-            }
-        };
+        const gameStats = localStorage.getItem('gameStats');
+        if (gameStats) {
+            return JSON.parse(gameStats);
+        } else {
+            return {
+                gamesPlayed: 0,
+                gamesWon: 0,
+                currentStreak: 0,
+                maxStreak: 0,
+                guessDistribution: {
+                    1: 0,
+                    2: 0,
+                    3: 0,
+                    4: 0,
+                    5: 0,
+                    6: 0
+                }
+            };
+        }
     }
 
     // CRITICAL FIX: Force reset daily completion status for new days
