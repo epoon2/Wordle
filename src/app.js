@@ -69,10 +69,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordOfTheDay = getRandomWord();
             }
         } else {
+            // Check if there's an in-progress game
+            const inProgressState = getInProgressPreviousState(dateParam);
+            
             // Create the game board
             createBoard();
             setupKeyboard();
             setupButtons();
+            
+            // If there's an in-progress game, restore it
+            if (inProgressState) {
+                restorePreviousState(inProgressState);
+                showMessage("Restored your in-progress game!");
+            }
         }
     } else if (gameMode === 'daily') {
         // Get today's word
@@ -119,6 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordOfTheDay = getRandomWord();
             }
         } else {
+            // Check if there's an in-progress game for today
+            const inProgressState = getInProgressDailyState();
+            
             // Set the word based on the game mode
             wordOfTheDay = getDailyWord();
             
@@ -128,6 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
             setupKeyboard();
             // Set up UI button listeners
             setupButtons();
+            
+            // If there's an in-progress game, restore it
+            if (inProgressState) {
+                restoreDailyState(inProgressState);
+                showMessage("Restored your in-progress game!");
+            }
         }
     } else {
         // Random mode
@@ -492,6 +510,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1500);
             
             isGameOver = true;
+        } else {
+            // Game is not over yet, but save the progress after each guess
+            if (gameMode === "daily") {
+                saveInProgressDailyState();
+            } else if (gameMode === "previous" && dateParam) {
+                saveInProgressPreviousState(dateParam);
+            }
         }
         
         // Move to the next row - moved after the game state check
@@ -1304,5 +1329,88 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("FORCE RESET: Cleared daily completion status for new day");
             }
         }
+    }
+    
+    // Save in-progress daily Wordle state
+    function saveInProgressDailyState() {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Collect all the guesses so far
+        const guesses = [];
+        for (let i = 0; i <= currentRow; i++) {
+            let rowGuess = '';
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                rowGuess += tile.dataset.letter || '';
+            }
+            if (rowGuess.length === 5) {
+                guesses.push(rowGuess);
+            }
+        }
+        
+        // Save the current board state
+        const state = {
+            guesses: guesses,
+            date: today,
+            word: wordOfTheDay,
+            won: false, // Not won yet
+            inProgress: true // Mark as in-progress
+        };
+        
+        // Use a different key for in-progress games
+        localStorage.setItem('dailyStateInProgress', JSON.stringify(state));
+    }
+    
+    // Save in-progress previous Wordle state
+    function saveInProgressPreviousState(dateStr) {
+        // Collect all the guesses so far
+        const guesses = [];
+        for (let i = 0; i <= currentRow; i++) {
+            let rowGuess = '';
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                rowGuess += tile.dataset.letter || '';
+            }
+            if (rowGuess.length === 5) {
+                guesses.push(rowGuess);
+            }
+        }
+        
+        // Save the current board state
+        const state = {
+            guesses: guesses,
+            date: dateStr,
+            word: wordOfTheDay,
+            won: false, // Not won yet
+            inProgress: true // Mark as in-progress
+        };
+        
+        // Use a different key for in-progress games
+        localStorage.setItem(`wordle_${dateStr}_inProgress`, JSON.stringify(state));
+    }
+
+    // Get in-progress daily state
+    function getInProgressDailyState() {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const savedState = JSON.parse(localStorage.getItem('dailyStateInProgress') || '{}');
+        
+        // Check if the saved state is from today and has the correct word
+        if (savedState.date === today && savedState.word === getDailyWord() && savedState.inProgress) {
+            return savedState;
+        }
+        
+        return null;
+    }
+
+    // Get in-progress previous state
+    function getInProgressPreviousState(dateStr) {
+        const savedState = JSON.parse(localStorage.getItem(`wordle_${dateStr}_inProgress`) || '{}');
+        
+        // Check if the saved state is valid
+        if (savedState.date === dateStr && savedState.guesses && savedState.guesses.length > 0 && savedState.inProgress) {
+            return savedState;
+        }
+        
+        return null;
     }
 });
