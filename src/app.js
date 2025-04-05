@@ -842,14 +842,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Dates before the first Wordle shouldn't be accessible,
             // but we handle it by using a modulo of the absolute difference
             daysSinceStart = Math.floor((firstDate - normalizedDate) / msInDay);
-            daysSinceStart = daysSinceStart % SOLUTION_WORDS.length;
+            // No modulo here - we'll apply the distribution algorithm below
         } else {
             // Normal case: date is after or equal to first Wordle
             daysSinceStart = Math.floor((normalizedDate - firstDate) / msInDay);
         }
         
-        // Get a word based on the day number, ensuring it cycles through solution words
-        const wordIndex = daysSinceStart % SOLUTION_WORDS.length;
+        // Use a better distribution algorithm to access all 2,309 words
+        // This implements a pseudorandom but deterministic selection based on the date
+        // The prime multiplier and modulus help ensure good distribution across the array
+        const prime = 31;
+        const wordIndex = (daysSinceStart * prime) % SOLUTION_WORDS.length;
+        
         return SOLUTION_WORDS[wordIndex];
     }
     
@@ -972,8 +976,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('completedPreviousWordles', JSON.stringify(completedPrevious));
         }
     }
-    
-    // Get the saved state of a previous Wordle
+
+    // Get the saved previous state
     function getPreviousState(dateStr) {
         const savedState = JSON.parse(localStorage.getItem(`wordle_${dateStr}`) || '{}');
         
@@ -984,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         return null;
     }
-    
+
     // Check if a previous Wordle has been completed
     function checkPreviousCompleted(dateStr) {
         const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
@@ -1118,4 +1122,4 @@ window.addEventListener('DOMContentLoaded', init);
 // Expose necessary functions to the global scope for admin tools
 window.gameApp = {
     getWordForDate: getWordForDate
-}; 
+};
