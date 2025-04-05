@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Initializer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #6aaa64;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #538d4e;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wordle History Initializer</h1>
+    
+    <div class="container">
+        <h2>Initialize 41 Previous Wordles</h2>
+        <p>This tool will set up your Wordle game with a history of 41 previous Wordles, making today Wordle #42 with the solution "ABACK".</p>
+        <p><strong>Warning:</strong> This will overwrite any existing Wordle data in localStorage. Make sure you want to do this before proceeding.</p>
+        
+        <button id="initialize">Initialize Wordle History</button>
+        
+        <div id="status"></div>
+    </div>
+    
+    <script>
+        // Load the solution words first
+        const SOLUTION_WORDS = [
+            'ABACK', 'ABASE', 'ABATE', 'ABBEY', 'ABBOT', 'ABHOR', 'ABIDE', 'ABLED', 'ABODE', 'ABORT',
+            'ABOUT', 'ABOVE', 'ABUSE', 'ABYSS', 'ACORN', 'ACRID', 'ACTOR', 'ACUTE', 'ADAGE', 'ADAPT',
+            'ADEPT', 'ADMIN', 'ADMIT', 'ADOBE', 'ADOPT', 'ADORE', 'ADORN', 'ADULT', 'AFFIX', 'AFIRE',
+            'AFOOT', 'AFOUL', 'AFTER', 'AGAIN', 'AGAPE', 'AGATE', 'AGENT', 'AGILE', 'AGING', 'AGLOW',
+            'AGONY', 'AGORA', 'AGREE', 'AHEAD', 'AIDER', 'AISLE', 'ALARM', 'ALBUM', 'ALERT', 'ALGAE',
+            // Add more words from your solution list...
+            'ZESTY', 'ZIPPY', 'ZOMBI', 'ZONAL', 'ZONED', 'ZONES', 'ZONKS'
+        ];
+        
+        // Add more sample solution words
+        const MORE_WORDS = [
+            'BACON', 'BADGE', 'BADLY', 'BAGEL', 'BAGGY', 'BAKER', 'BALER', 'BALMY', 'BANAL', 'BANJO',
+            'BARGE', 'BARON', 'BASAL', 'BASIC', 'BASIL', 'BASIN', 'BASIS', 'BASTE', 'BATCH', 'BATHE',
+            'BATON', 'BATTY', 'BAWDY', 'BAYOU', 'BEACH', 'BEADY', 'BEARD', 'BEAST', 'BEECH', 'BEEFY',
+            'CIGAR', 'CINCH', 'CIRCA', 'CIVIC', 'CIVIL', 'CLACK', 'CLAIM', 'CLAMP', 'CLANG', 'CLANK',
+            'CLASH', 'CLASP', 'CLASS', 'CLEAN', 'CLEAR', 'CLEAT', 'CLEFT', 'CLERK', 'CLICK', 'CLIFF',
+            'DRINK', 'DRIVE', 'DROIT', 'DROLL', 'DRONE', 'DROOL', 'DROOP', 'DROSS', 'DROVE', 'DROWN',
+            'EARTH', 'EASEL', 'EATEN', 'EATER', 'EBONY', 'ECLAT', 'EDICT', 'EDIFY', 'EERIE', 'EGRET',
+            'EIGHT', 'EJECT', 'EKING', 'ELATE', 'ELBOW', 'ELDER', 'ELECT', 'ELEGY', 'ELFIN', 'ELIDE',
+            'FABLE', 'FACED', 'FACET', 'FACIA', 'FACTS', 'FADED', 'FADES', 'FAILS', 'FAINT', 'FAIRS',
+            'FAITH', 'FAKER', 'FAKES', 'FALLS', 'FALSE', 'FAMED', 'FANCY', 'FANGS', 'FANNY', 'FARCE'
+        ];
+
+        document.getElementById('initialize').addEventListener('click', function() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = '';
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = 'Initializing...';
+            
+            try {
+                initializeWordleHistory();
+                statusDiv.className = 'success';
+                statusDiv.innerHTML = `
+                    <h3>Initialization Successful!</h3>
+                    <p>Your Wordle history has been set up with 41 previous Wordles (ready to play) and today's Wordle #42 with solution "ABACK".</p>
+                    <p>Return to your <a href="https://epoon2.github.io/Wordle/" target="_blank">Wordle game</a> and refresh the page to see the changes.</p>
+                    <p>All previous Wordles are available but not marked as completed - you can enjoy playing them!</p>
+                    <h4>localStorage Details:</h4>
+                    <pre>firstWordleDate: ${localStorage.getItem('firstWordleDate')}</pre>
+                    <pre>Word overrides count: ${Object.keys(JSON.parse(localStorage.getItem('wordleOverrides') || '{}')).length}</pre>
+                    <pre>Today's word override: ${JSON.parse(localStorage.getItem('wordleOverrides') || '{}')[new Date().toISOString().split('T')[0]]}</pre>
+                `;
+            } catch (error) {
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `
+                    <h3>Initialization Failed</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Please try again or check the console for more details.</p>
+                `;
+                console.error('Initialization error:', error);
+            }
+        });
+        
+        function initializeWordleHistory() {
+            // Calculate the date for Wordle #1 (41 days before today)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const firstWordleDate = new Date(today);
+            firstWordleDate.setDate(today.getDate() - 41); // 41 days ago
+            
+            // Verify calculation
+            const msInDay = 86400000;
+            const checkDiff = Math.round((today - firstWordleDate) / msInDay);
+            console.log(`Days difference: ${checkDiff}`);
+            
+            if (checkDiff !== 41) {
+                // Adjust date manually to ensure 41 days difference
+                firstWordleDate.setTime(today.getTime() - (41 * msInDay));
+                console.log("Adjusted first date calculation to ensure 41 days difference");
+            }
+            
+            // Store the first Wordle date
+            localStorage.setItem('firstWordleDate', firstWordleDate.toISOString());
+            console.log(`Set firstWordleDate to ${firstWordleDate.toISOString()}`);
+            
+            // Combine solution words
+            const fullWordList = [...SOLUTION_WORDS, ...MORE_WORDS];
+            
+            // Create a copy of the word list excluding ABACK (which is for #42)
+            const availableWords = fullWordList.filter(word => word !== 'ABACK');
+            
+            // Shuffle the array to get random words
+            const shuffledWords = [...availableWords];
+            for (let i = shuffledWords.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledWords[i], shuffledWords[j]] = [shuffledWords[j], shuffledWords[i]];
+            }
+            
+            // Take the first 41 words for our past Wordles
+            const selectedWords = shuffledWords.slice(0, 41);
+            
+            // Create a record for the word overrides
+            const wordOverrides = {};
+            
+            // Set up 41 previous Wordles (but don't mark them as completed)
+            for (let i = 0; i < 41; i++) {
+                const date = new Date(firstWordleDate);
+                date.setDate(firstWordleDate.getDate() + i);
+                
+                const dateString = date.toISOString().split('T')[0];
+                const word = selectedWords[i];
+                
+                // Store the word override
+                wordOverrides[dateString] = word;
+                
+                // We don't create pastGame records or mark these as completed
+                // This allows the user to play the previous Wordles for the first time
+            }
+            
+            // Store word overrides
+            localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+            
+            // Add today's word (ABACK) as Wordle #42
+            const todayString = today.toISOString().split('T')[0];
+            wordOverrides[todayString] = 'ABACK';
+            localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
+            
+            // Reset stats to show no games played yet
+            const stats = {
+                gamesPlayed: 0,
+                gamesWon: 0,
+                currentStreak: 0,
+                maxStreak: 0,
+                guesses: {
+                    1: 0,
+                    2: 0,
+                    3: 0,
+                    4: 0,
+                    5: 0,
+                    6: 0
+                }
+            };
+            localStorage.setItem('wordleStats', JSON.stringify(stats));
+            
+            // Remove any existing completed records
+            localStorage.removeItem('completedDailies');
+            localStorage.removeItem('completedPreviousWordles');
+            
+            return true;
+        }
+    </script>
+</body>
+</html> 
