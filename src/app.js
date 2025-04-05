@@ -949,8 +949,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
         const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
         
-        // Check if the saved state is from today
-        if (savedState.date === today) {
+        // Check if the saved state is from today and has the correct word
+        if (savedState.date === today && savedState.word === getDailyWord()) {
             return savedState;
         }
         

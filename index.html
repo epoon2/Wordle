@@ -649,11 +649,12 @@
                 // Calculate days since the first Wordle
                 const firstDate = new Date(firstWordleDate);
                 firstDate.setHours(0, 0, 0, 0); // Normalize to start of day
+                date.setHours(0, 0, 0, 0); // Normalize to start of day
                 const msInDay = 86400000;
                 
-                // Make sure we get at least 1 for today
-                const daysDiff = Math.max(0, (today - firstDate) / msInDay);
-                const daysSinceFirst = Math.floor(daysDiff) + 1;
+                // Calculate the exact difference in days
+                const daysDiff = Math.round((date - firstDate) / msInDay);
+                const daysSinceFirst = daysDiff + 1; // Add 1 because the first day is Wordle #1
                 
                 return daysSinceFirst;
             }
