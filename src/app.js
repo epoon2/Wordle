@@ -571,242 +571,143 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Display game statistics in a modal
     function displayStats() {
-        // Create the stats modal if it doesn't exist
-        if (!document.getElementById('stats-modal')) {
-            const modal = document.createElement('div');
-            modal.id = 'stats-modal';
-            modal.classList.add('modal');
-            
-            const modalContent = document.createElement('div');
-            modalContent.classList.add('modal-content');
-            
-            const closeBtn = document.createElement('span');
-            closeBtn.classList.add('close-button');
-            closeBtn.innerHTML = '&times;';
-            closeBtn.onclick = function() {
-                modal.style.display = 'none';
-            };
-            
-            const header = document.createElement('h2');
-            header.textContent = 'STATISTICS';
-            
-            const statsContainer = document.createElement('div');
-            statsContainer.id = 'stats-container';
-            statsContainer.classList.add('stats-container');
-            
-            modalContent.appendChild(closeBtn);
-            modalContent.appendChild(header);
-            modalContent.appendChild(statsContainer);
-            modal.appendChild(modalContent);
-            
-            // Add event to close when clicking outside
-            window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = 'none';
-                }
-            };
-            
-            document.body.appendChild(modal);
+        const statsModal = document.getElementById('stats-modal');
+        statsModal.style.display = 'flex';
+        
+        // Get the current stats
+        const stats = getStats();
+        
+        // Update the display
+        document.getElementById('games-played').textContent = stats.gamesPlayed;
+        document.getElementById('win-percentage').textContent = Math.round((stats.gamesWon / Math.max(stats.gamesPlayed, 1)) * 100);
+        document.getElementById('current-streak').textContent = stats.currentStreak;
+        document.getElementById('max-streak').textContent = stats.maxStreak;
+        
+        // Update the guess distribution graph
+        const maxValue = Math.max(...Object.values(stats.guessDistribution));
+        for (let i = 1; i <= 6; i++) {
+            const count = stats.guessDistribution[i] || 0;
+            const bar = document.getElementById(`guess-${i}`);
+            const barValue = document.getElementById(`guess-${i}-value`);
+            barValue.textContent = count;
+            if (maxValue > 0) {
+                bar.style.width = `${(count / maxValue) * 100}%`;
+            } else {
+                bar.style.width = '0%';
+            }
         }
         
-        // Update stats content
-        const statsContainer = document.getElementById('stats-container');
-        statsContainer.innerHTML = '';
+        // Get the modal content for displaying result
+        const modalContent = document.getElementById('stats-content');
         
-        // Create statistics boxes
-        const boxes = [
-            { label: 'Played', value: gameStats.gamesPlayed },
-            { label: 'Win %', value: Math.round((gameStats.gamesWon / Math.max(1, gameStats.gamesPlayed)) * 100) },
-            { label: 'Current Streak', value: gameStats.currentStreak },
-            { label: 'Max Streak', value: gameStats.maxStreak }
-        ];
+        // Show a different message depending on the game mode
+        let modeText = '';
+        if (gameMode === 'daily') {
+            modeText = `Today's Wordle (#${wordleNumber})`;
+        } else if (gameMode === 'previous' && numberParam) {
+            modeText = `Wordle #${numberParam}`;
+        } else {
+            modeText = 'Random Play';
+        }
         
-        const statsBoxes = document.createElement('div');
-        statsBoxes.classList.add('stats-boxes');
+        // Action buttons depending on game status
+        let actionButtons = '';
         
-        boxes.forEach(box => {
-            const statBox = document.createElement('div');
-            statBox.classList.add('stat-box');
+        // Show different buttons based on game status
+        if (isGameOver) {
+            // Always show Random Play and Previous Wordles buttons after game is over
+            actionButtons = `
+                <div class="stats-action-buttons">
+                    <button id="stats-random-btn" class="action-button">
+                        <span class="icon">🎲</span> Random Play
+                    </button>
+                    <button id="stats-previous-btn" class="action-button">
+                        <span class="icon">🗓️</span> Previous Wordles
+                    </button>
+                </div>
+            `;
+        } else {
+            // Game still ongoing - just show close button
+            actionButtons = '';
+        }
+        
+        // Update the content of the stats modal
+        modalContent.innerHTML = `
+            <div class="stats-header">
+                <h2>STATISTICS</h2>
+                <button id="stats-close" class="close-button">×</button>
+            </div>
+            <div class="stats-numbers">
+                <div class="stat-item">
+                    <div id="games-played" class="stat-value">${stats.gamesPlayed}</div>
+                    <div class="stat-label">Played</div>
+                </div>
+                <div class="stat-item">
+                    <div id="win-percentage" class="stat-value">${Math.round((stats.gamesWon / Math.max(stats.gamesPlayed, 1)) * 100)}</div>
+                    <div class="stat-label">Win %</div>
+                </div>
+                <div class="stat-item">
+                    <div id="current-streak" class="stat-value">${stats.currentStreak}</div>
+                    <div class="stat-label">Current Streak</div>
+                </div>
+                <div class="stat-item">
+                    <div id="max-streak" class="stat-value">${stats.maxStreak}</div>
+                    <div class="stat-label">Max Streak</div>
+                </div>
+            </div>
+            <h3>GUESS DISTRIBUTION</h3>
+            <div class="guess-distribution">
+                ${Array.from({ length: 6 }, (_, i) => {
+                    const count = stats.guessDistribution[i + 1] || 0;
+                    const width = maxValue > 0 ? (count / maxValue) * 100 : 0;
+                    return `
+                        <div class="guess-row">
+                            <div class="guess-label">${i + 1}</div>
+                            <div class="guess-bar-container">
+                                <div id="guess-${i + 1}" class="guess-bar" style="width: ${width}%;">
+                                    <span id="guess-${i + 1}-value" class="guess-value">${count}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
             
-            const value = document.createElement('div');
-            value.classList.add('stat-value');
-            value.textContent = box.value;
+            ${isGameOver ? `<div class="game-result">
+                <p>${modeText} ${wordOfTheDay}</p>
+                <p>${currentRow <= 6 && currentRow > 0 ? `Completed in ${currentRow} ${currentRow === 1 ? 'guess' : 'guesses'}` : 'Not completed'}</p>
+            </div>` : ''}
             
-            const label = document.createElement('div');
-            label.classList.add('stat-label');
-            label.textContent = box.label;
-            
-            statBox.appendChild(value);
-            statBox.appendChild(label);
-            statsBoxes.appendChild(statBox);
+            ${actionButtons}
+        `;
+        
+        // Add event listeners for the buttons
+        const closeButton = document.getElementById('stats-close');
+        closeButton.addEventListener('click', () => {
+            statsModal.style.display = 'none';
         });
         
-        statsContainer.appendChild(statsBoxes);
-        
-        // Create guess distribution
-        const guessDistribution = document.createElement('div');
-        guessDistribution.classList.add('guess-distribution');
-        
-        const distributionHeader = document.createElement('h3');
-        distributionHeader.textContent = 'GUESS DISTRIBUTION';
-        guessDistribution.appendChild(distributionHeader);
-        
-        const maxGuesses = Math.max(...Object.values(gameStats.guesses));
-        
-        for (let i = 1; i <= 6; i++) {
-            const row = document.createElement('div');
-            row.classList.add('distribution-row');
-            
-            const label = document.createElement('div');
-            label.classList.add('distribution-label');
-            label.textContent = i;
-            
-            const bar = document.createElement('div');
-            bar.classList.add('distribution-bar');
-            
-            // Calculate width percentage based on max value
-            const width = maxGuesses > 0 ? (gameStats.guesses[i] / maxGuesses) * 100 : 0;
-            bar.style.width = `${Math.max(7, width)}%`; // Minimum width for visibility
-            
-            if (i === currentRow && isGameOver && wordOfTheDay === document.getElementById(`tile-${i-1}-0`).dataset.letter + document.getElementById(`tile-${i-1}-1`).dataset.letter + document.getElementById(`tile-${i-1}-2`).dataset.letter + document.getElementById(`tile-${i-1}-3`).dataset.letter + document.getElementById(`tile-${i-1}-4`).dataset.letter) {
-                bar.classList.add('current-guess');
-            }
-            
-            const barText = document.createElement('span');
-            barText.textContent = gameStats.guesses[i];
-            bar.appendChild(barText);
-            
-            row.appendChild(label);
-            row.appendChild(bar);
-            guessDistribution.appendChild(row);
-        }
-        
-        statsContainer.appendChild(guessDistribution);
-        
-        // Add game result and word revelation if game is over
+        // Add event listeners for action buttons if game is over
         if (isGameOver) {
-            const resultContainer = document.createElement('div');
-            resultContainer.classList.add('result-container');
+            const randomButton = document.getElementById('stats-random-btn');
+            randomButton.addEventListener('click', () => {
+                // Switch to random mode
+                window.location.href = 'game.html?mode=random';
+            });
             
-            const resultText = document.createElement('p');
-            resultText.classList.add('result-text');
-            if (gameStats.currentStreak > 0) {
-                resultText.textContent = "You won!";
-            } else {
-                resultText.textContent = "Game over!";
-            }
-            
-            const wordReveal = document.createElement('p');
-            wordReveal.classList.add('word-reveal');
-            wordReveal.textContent = `The word was: ${wordOfTheDay}`;
-            
-            const modeText = document.createElement('p');
-            modeText.classList.add('mode-text');
-            
-            // Show the Wordle number for daily and previous modes
-            if (gameMode === 'daily') {
-                modeText.textContent = `Today's Wordle (#${wordleNumber})`;
-            } else if (gameMode === 'previous' && wordleNumber > 1) {
-                modeText.textContent = `Wordle #${wordleNumber}`;
-            } else {
-                modeText.textContent = "Random Play";
-            }
-            
-            resultContainer.appendChild(resultText);
-            resultContainer.appendChild(wordReveal);
-            resultContainer.appendChild(modeText);
-            
-            // Different buttons based on game mode
-            if (gameMode === 'daily') {
-                // For daily mode: Show Random Play and Previous Wordles buttons
-                const buttonsContainer = document.createElement('div');
-                buttonsContainer.classList.add('popup-buttons-container');
-                buttonsContainer.style.display = 'flex';
-                buttonsContainer.style.gap = '10px';
-                buttonsContainer.style.justifyContent = 'center';
-                buttonsContainer.style.marginTop = '15px';
-                
-                // Random Play button
-                const randomButton = document.createElement('button');
-                randomButton.classList.add('replay-button');
-                randomButton.textContent = 'Random Play';
-                randomButton.style.backgroundColor = 'var(--color-present)';
-                randomButton.addEventListener('click', () => {
-                    // Switch to random mode
-                    gameMode = "random";
-                    const modeToggle = document.getElementById('mode-toggle');
-                    if (modeToggle) {
-                        modeToggle.innerHTML = "🎲";
-                        modeToggle.title = "Random Play";
-                    }
-                    
-                    // Get a new random word
-                    wordOfTheDay = getRandomWord();
-                    
-                    // Update header to not show number for random mode
-                    const header = document.querySelector('h1');
-                    if (header) {
-                        header.textContent = "WORDLE";
-                    }
-                    document.title = "Wordle";
-                    
-                    // Restart game and close the modal
-                    restartGame();
-                    document.getElementById('stats-modal').style.display = 'none';
-                });
-                
-                // Previous Wordles button
-                const previousButton = document.createElement('button');
-                previousButton.classList.add('replay-button');
-                previousButton.textContent = 'Previous Wordles';
-                previousButton.style.backgroundColor = 'var(--color-absent)';
-                previousButton.addEventListener('click', () => {
-                    // Redirect to the homepage with a focus on previous wordles
-                    window.location.href = "index.html#previous";
-                });
-                
-                buttonsContainer.appendChild(randomButton);
-                buttonsContainer.appendChild(previousButton);
-                resultContainer.appendChild(buttonsContainer);
-            } else {
-                // For other modes: Show the original Play Again button
-                const replayButton = document.createElement('button');
-                replayButton.classList.add('replay-button');
-                replayButton.textContent = 'Play Again';
-                replayButton.addEventListener('click', () => {
-                    // If we're in daily mode and it's completed, switch to random mode
-                    if (gameMode === "daily" && checkDailyCompleted()) {
-                        gameMode = "random";
-                        const modeToggle = document.getElementById('mode-toggle');
-                        if (modeToggle) {
-                            modeToggle.innerHTML = "🎲";
-                            modeToggle.title = "Random Play";
-                        }
-                    }
-                    
-                    // Generate a new word based on the current mode
-                    if (gameMode === "daily") {
-                        wordOfTheDay = getDailyWord();
-                    } else if (gameMode === "previous") {
-                        // For previous games, redirect to homepage
-                        window.location.href = "index.html";
-                        return;
-                    } else {
-                        wordOfTheDay = getRandomWord();
-                    }
-                    
-                    restartGame();
-                    document.getElementById('stats-modal').style.display = 'none';
-                });
-                
-                resultContainer.appendChild(replayButton);
-            }
-            
-            statsContainer.appendChild(resultContainer);
+            const previousButton = document.getElementById('stats-previous-btn');
+            previousButton.addEventListener('click', () => {
+                // Open index.html with the previous parameter
+                window.location.href = 'index.html#previous';
+            });
         }
         
-        // Show the modal
-        document.getElementById('stats-modal').style.display = 'block';
+        // Close when clicking outside the modal
+        window.addEventListener('click', (event) => {
+            if (event.target === statsModal) {
+                statsModal.style.display = 'none';
+            }
+        });
     }
 
     // Display help information
@@ -1186,6 +1087,25 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('firstWordleDate');
             localStorage.setItem('firstWordleDate', today.toISOString().split('T')[0]);
         }
+    }
+
+    // Get or initialize game statistics
+    function getStats() {
+        // Use the current gameStats, or create a new object if not available
+        return {
+            gamesPlayed: gameStats.gamesPlayed || 0,
+            gamesWon: gameStats.gamesWon || 0,
+            currentStreak: gameStats.currentStreak || 0,
+            maxStreak: gameStats.maxStreak || 0,
+            guessDistribution: gameStats.guesses || {
+                1: 0,
+                2: 0,
+                3: 0,
+                4: 0,
+                5: 0,
+                6: 0
+            }
+        };
     }
 });
 
