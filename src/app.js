@@ -135,6 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (gameMode === 'daily') {
             // For daily mode, show today's number
             wordleNumber = getCurrentWordleNumber();
+            
+            // Double-check that we have the correct wordleNumber
+            console.log("Current Wordle number: " + wordleNumber);
         }
         
         // Update title and header with the current wordle number
@@ -239,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set the button appearance based on game mode
         if (gameMode === "daily") {
             modeToggle.innerHTML = "📅";
-            modeToggle.title = "Today's Wordle (#1)";
+            modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
         } else if (gameMode === "previous") {
             modeToggle.innerHTML = "🗓️";
             modeToggle.title = `Wordle #${wordleNumber}`;
@@ -296,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Switch to daily mode but show the previous state
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
-                    modeToggle.title = "Today's Wordle (#1)";
+                    modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
                     
                     // Show message and update the game board with previous attempt
                     showMessage("Showing your completed daily challenge");
@@ -312,9 +315,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Update header if needed
                         const header = document.querySelector('h1');
                         if (header) {
-                            header.textContent = "WORDLE #1";
+                            header.textContent = `WORDLE #${getCurrentWordleNumber()}`;
                         }
-                        document.title = "Wordle #1";
+                        document.title = `Wordle #${getCurrentWordleNumber()}`;
                         
                         // Show the stats modal after a short delay
                         setTimeout(() => {
@@ -325,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Switch to daily mode with new game
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
-                    modeToggle.title = "Today's Wordle (#1)";
+                    modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
                     wordOfTheDay = getDailyWord();
                     restartGame();
                     showMessage("Switched to daily challenge mode");
@@ -333,9 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Update header if needed
                     const header = document.querySelector('h1');
                     if (header) {
-                        header.textContent = "WORDLE #1";
+                        header.textContent = `WORDLE #${getCurrentWordleNumber()}`;
                     }
-                    document.title = "Wordle #1";
+                    document.title = `Wordle #${getCurrentWordleNumber()}`;
                 }
             }
         });
