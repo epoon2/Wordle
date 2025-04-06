@@ -168,6 +168,52 @@
         </div>
     </div>
 
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>HOW TO PLAY</h2>
+            <div class="help-content">
+                <p>Guess the WORDLE in six tries.</p>
+                <p>Each guess must be a valid five-letter word. Hit the enter button to submit.</p>
+                <p>After each guess, the color of the tiles will change to show how close your guess was to the word.</p>
+                <div class="examples">
+                    <p><strong>Examples</strong></p>
+                    <div class="example">
+                        <div class="tile-row">
+                            <div class="tile correct">W</div>
+                            <div class="tile">E</div>
+                            <div class="tile">A</div>
+                            <div class="tile">R</div>
+                            <div class="tile">Y</div>
+                        </div>
+                        <p>The letter W is in the word and in the correct spot.</p>
+                    </div>
+                    <div class="example">
+                        <div class="tile-row">
+                            <div class="tile">P</div>
+                            <div class="tile present">I</div>
+                            <div class="tile">L</div>
+                            <div class="tile">L</div>
+                            <div class="tile">S</div>
+                        </div>
+                        <p>The letter I is in the word but in the wrong spot.</p>
+                    </div>
+                    <div class="example">
+                        <div class="tile-row">
+                            <div class="tile">V</div>
+                            <div class="tile">A</div>
+                            <div class="tile">G</div>
+                            <div class="tile absent">U</div>
+                            <div class="tile">E</div>
+                        </div>
+                        <p>The letter U is not in the word in any spot.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="src/words.js"></script>
     <script src="src/app.js"></script>
 </body>
