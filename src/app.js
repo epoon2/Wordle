@@ -499,10 +499,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveStats(gameStats);
             }
             
-            // If in daily mode, mark as completed and save the state
+            // If in daily mode, mark as completed and save the state.
+            // Also save under the per-date key so tomorrow's archive
+            // shows this game as completed.
             if (gameMode === "daily") {
                 markDailyCompleted();
                 saveDailyState();
+                savePreviousState(todayStr);
             }
             // If in previous mode, mark as completed and save the state
             else if (gameMode === "previous" && dateParam) {
@@ -533,9 +536,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveStats(gameStats);
             }
             
-            // If in daily mode, still save the loss state
+            // If in daily mode, still save the loss state.
+            // Also save under the per-date key so tomorrow's archive
+            // shows this game as played.
             if (gameMode === "daily") {
                 saveDailyState();
+                savePreviousState(todayStr);
             }
             // If in previous mode, still save the loss state
             else if (gameMode === "previous" && dateParam) {
@@ -1189,6 +1195,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Use a different key for in-progress games
         localStorage.setItem('dailyStateInProgress', JSON.stringify(state));
+        
+        // Also save under the per-date key so an unfinished daily can be
+        // resumed from the Previous Wordles archive after the day passes
+        localStorage.setItem(`wordle_${todayStr}_inProgress`, JSON.stringify(state));
     }
     
     // Save in-progress previous Wordle state
