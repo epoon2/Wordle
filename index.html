@@ -402,19 +402,22 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Set current date
-            const today = new Date();
+            // Set current date (Pacific Time - the same clock the game uses)
+            const todayStr = getPacificDateString();
             const options = { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
-                day: 'numeric' 
+                day: 'numeric',
+                timeZone: 'UTC'
             };
-            document.getElementById('current-date').textContent = today.toLocaleDateString(undefined, options);
+            document.getElementById('current-date').textContent =
+                new Date(dateStringToUTC(todayStr)).toLocaleDateString(undefined, options);
             
-            // Calculate today's Wordle number (assuming #1 is today)
-            const wordleNumber = calculateWordleNumber(today);
+            // Today's Wordle number, derived from the shared epoch
+            const wordleNumber = getWordleNumberForDate(todayStr);
             document.getElementById('today-number').textContent = wordleNumber;
+            document.title = `Wordle #${wordleNumber}`;
             
             // Previous Wordles Modal Elements
             const archiveButton = document.getElementById('archive-button');
@@ -448,31 +451,6 @@
                 }
             });
             
-            // Function to calculate the current Wordle number
-            function calculateWordleNumber(date) {
-                // Check if we have a stored first Wordle date
-                let firstWordleDate = localStorage.getItem('firstWordleDate');
-                
-                if (!firstWordleDate) {
-                    // If this is the first time, store today as the first Wordle date
-                    firstWordleDate = today.toISOString().split('T')[0];
-                    localStorage.setItem('firstWordleDate', firstWordleDate);
-                    return 1; // This is Wordle #1
-                }
-                
-                // Calculate days since the first Wordle
-                const firstDate = new Date(firstWordleDate);
-                firstDate.setHours(0, 0, 0, 0); // Normalize to start of day
-                date.setHours(0, 0, 0, 0); // Normalize to start of day
-                const msInDay = 86400000;
-                
-                // Calculate the exact difference in days
-                const daysDiff = Math.round((date - firstDate) / msInDay);
-                const daysSinceFirst = daysDiff + 1; // Add 1 because the first day is Wordle #1
-                
-                return daysSinceFirst;
-            }
-            
             // Function to populate the previous Wordles list
             function populatePreviousWordles(container, currentNumber) {
                 container.innerHTML = '';
@@ -493,14 +471,12 @@
                 
                 // Create buttons for previous Wordles (#1 to #current-1)
                 for (let i = currentNumber - 1; i >= 1; i--) {
-                    const date = new Date(today);
-                    date.setDate(today.getDate() - (currentNumber - i));
-                    
-                    const dateStr = date.toISOString().split('T')[0];
-                    const formattedDate = date.toLocaleDateString(undefined, {
+                    const dateStr = getDateForWordleNumber(i);
+                    const formattedDate = new Date(dateStringToUTC(dateStr)).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
-                        year: 'numeric'
+                        year: 'numeric',
+                        timeZone: 'UTC'
                     });
                     
                     const button = document.createElement('button');
@@ -536,71 +512,8 @@
         });
     </script>
     
-    <script>
-        // Load the game constants and helper functions
-        // Immediately initialize the Wordle date and history
-        (function() {
-            // Initialize a global today variable
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            // Force auto-initialization on first load
-            const firstWordleDate = localStorage.getItem('firstWordleDate');
-            const currentVersion = "1.0";
-            const storedVersion = localStorage.getItem('wordleVersion');
-            
-            if (!firstWordleDate || storedVersion !== currentVersion) {
-                console.log("Auto-initializing on index page...");
-                
-                // Calculate the date for Wordle #1 (41 days before today)
-                const newFirstWordleDate = new Date(today);
-                newFirstWordleDate.setDate(today.getDate() - 41); // 41 days ago
-                newFirstWordleDate.setHours(0, 0, 0, 0); // Normalize to midnight
-                
-                // Store the first Wordle date
-                localStorage.setItem('firstWordleDate', newFirstWordleDate.toISOString());
-                localStorage.setItem('wordleVersion', currentVersion);
-                
-                // Calculate today's Wordle number
-                const msInDay = 86400000;
-                const daysDiff = Math.round((today - newFirstWordleDate) / msInDay);
-                const todayNumber = daysDiff + 1;
-                
-                // Immediately update the title text
-                document.title = `Wordle #${todayNumber}`;
-                
-                // Update the button text once the DOM is ready
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.querySelector('.daily-button').textContent = `Play Wordle #${todayNumber}`;
-                });
-            } else {
-                // Just calculate the number
-                const storedFirstDate = new Date(firstWordleDate);
-                storedFirstDate.setHours(0, 0, 0, 0);
-                
-                const msInDay = 86400000;
-                const daysDiff = Math.round((today - storedFirstDate) / msInDay);
-                const todayNumber = daysDiff + 1;
-                
-                // Immediately update the title text
-                document.title = `Wordle #${todayNumber}`;
-                
-                // Update the button text once the DOM is ready
-                document.addEventListener('DOMContentLoaded', function() {
-                    document.querySelector('.daily-button').textContent = `Play Wordle #${todayNumber}`;
-                });
-            }
-        })();
-    </script>
+
     
-    <script>
-        // Check if URL has #previous hash to automatically open the Previous Wordles modal
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.location.hash === '#previous') {
-                console.log('Opening Previous Wordles modal...');
-                document.getElementById('previous-modal').style.display = 'block';
-            }
-        });
-    </script>
+
 </body>
 </html> 
