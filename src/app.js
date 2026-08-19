@@ -1,72 +1,20 @@
-// Make today a global variable so it can be accessed by all functions
-let today;
+// Today's date in Pacific Time as 'YYYY-MM-DD', set on page load
+let todayStr;
 
 // Global array to track all animation timeouts
 let animationTimeouts = [];
 // Track stats display timeouts separately
 let statsTimeouts = [];
 
-// Get the current date in Pacific Time Zone
-function getPacificDate() {
-    // Create date in local time
-    const date = new Date();
-    
-    try {
-        // More reliable method using built-in timezone support if available
-        const options = { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' };
-        const formatter = new Intl.DateTimeFormat('en-US', options);
-        const parts = formatter.formatToParts(date);
-        
-        // Create a map of the parts
-        const datePartMap = {};
-        parts.forEach(part => {
-            if (part.type !== 'literal') {
-                datePartMap[part.type] = part.value;
-            }
-        });
-        
-        // Create a new date WITHOUT the Z (UTC) suffix
-        const pacificDateStr = `${datePartMap.year}-${datePartMap.month}-${datePartMap.day}`;
-        const pacificDate = new Date(pacificDateStr);
-        pacificDate.setHours(0, 0, 0, 0);
-        
-        console.log("Current date in Pacific Time (Intl method):", pacificDateStr);
-        return pacificDate;
-    } catch (e) {
-        console.log("Falling back to manual PST calculation due to error:", e.message);
-        
-        // Manual fallback calculation
-        // Convert to Pacific Time (UTC-8 for PST, UTC-7 for PDT)
-        // This is a simple approach - use fixed PST (UTC-8) offset
-        const pstOffset = -8 * 60; // PST offset in minutes
-        const utcOffset = date.getTimezoneOffset(); // Local offset in minutes
-        
-        // Total offset from local time to PST in milliseconds
-        const totalOffset = (pstOffset - utcOffset) * 60 * 1000;
-        
-        // Create new date adjusted to Pacific Time
-        const pacificDate = new Date(date.getTime() + totalOffset);
-        
-        // Normalize to start of day in Pacific Time
-        pacificDate.setHours(0, 0, 0, 0);
-        
-        console.log("Current date in Pacific Time (manual method):", pacificDate.toISOString().split('T')[0]);
-        return pacificDate;
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize today's date in Pacific Time
-    today = getPacificDate();
+    // Today's date in Pacific Time (from src/daily.js)
+    todayStr = getPacificDateString();
     
     // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     
-    // Ensure Wordle date is initialized
-    initializeWordleDate();
-    
-    // CRITICAL FIX: Force reset daily completion status on page load if word has changed
-    forceResetDailyStatus();
+    // One-time cleanup of storage left behind by the old per-device word system
+    migrateOldStorage();
     
     // Get mode and date parameters from URL
     const modeParam = urlParams.get('mode');
@@ -136,19 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get today's word
         wordOfTheDay = getDailyWord();
         
-        // For testing purposes - ensure today's word is ABACK for Wordle #42
-        if (wordleNumber === 42) {
-            // Check if we need to override the word to make it ABACK
-            if (wordOfTheDay !== 'ABACK') {
-                // Create the override if needed
-                const overrides = JSON.parse(localStorage.getItem('wordleOverrides') || '{}');
-                const today = new Date().toISOString().split('T')[0];
-                overrides[today] = 'ABACK';
-                localStorage.setItem('wordleOverrides', JSON.stringify(overrides));
-                wordOfTheDay = 'ABACK';
-            }
-        }
-        
         // Check if today's daily challenge has been completed
         const dailyCompleted = checkDailyCompleted();
         if (dailyCompleted) {
@@ -214,11 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gameMode === 'previous' && numberParam) {
             wordleNumber = parseInt(numberParam);
         } else if (gameMode === 'daily') {
-            // For daily mode, always ensure we show #42
-            wordleNumber = 42; // Hard-code to 42 for consistency
-            
-            // Double-check that we have the correct wordleNumber
-            console.log("Set daily Wordle number to:", wordleNumber);
+            wordleNumber = getCurrentWordleNumber();
         }
         
         // Update title and header with the current wordle number
@@ -241,55 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Calculate the current Wordle number based on today's date
     function getCurrentWordleNumber() {
-        // Check if we have a stored first Wordle date
-        const firstWordleDate = localStorage.getItem('firstWordleDate');
-        
-        if (!firstWordleDate) {
-            console.error("No firstWordleDate found, initializing Wordle history");
-            // Force initialization
-            initializeWordleDate();
-            return 42; // Always return 42 for today
-        }
-        
-        try {
-            // Create Date objects with consistent format
-            const firstDate = new Date(firstWordleDate);
-            
-            // Ensure hours are set to 0 for consistent date comparison
-            firstDate.setHours(0, 0, 0, 0);
-            
-            // Get current date in Pacific Time
-            const currentDate = getPacificDate();
-            
-            const msInDay = 86400000;
-            
-            // Calculate the difference in days using milliseconds for precision
-            // Math.round can sometimes lead to off-by-one errors due to DST or time precision
-            // Using Math.floor ensures we get the exact number of completed days
-            const daysDiff = Math.round((currentDate.getTime() - firstDate.getTime()) / msInDay);
-            
-            // The Wordle number is days since first + 1
-            const wordleNum = daysDiff + 1;
-            
-            console.log("Wordle number calculation:", {
-                firstDate: firstDate.toISOString().split('T')[0],
-                currentDate: currentDate.toISOString().split('T')[0],
-                daysDiff,
-                wordleNum
-            });
-            
-            // For safety, for today's date, always return 42
-            if (daysDiff === 41) {
-                console.log("Verified today's date is 41 days after first date, setting Wordle # to 42");
-                return 42;
-            }
-            
-            // Return the calculated number
-            return wordleNum;
-        } catch (e) {
-            console.error("Error calculating Wordle number:", e);
-            return 42; // Default to 42 as fallback
-        }
+        return getWordleNumberForDate(todayStr);
     }
     
     // Creates the game board tiles
@@ -347,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Set the button appearance based on game mode
         if (gameMode === "daily") {
             modeToggle.innerHTML = "📅";
-            modeToggle.title = `Today's Wordle (#42)`;
+            modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
         } else if (gameMode === "previous") {
             modeToggle.innerHTML = "🗓️";
             modeToggle.title = `Wordle #${wordleNumber}`;
@@ -438,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Switch to daily mode but show the previous state
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
-                    modeToggle.title = `Today's Wordle (#42)`;
+                    modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
                     
                     // Show message and update the game board with previous attempt
                     showMessage("Showing your completed daily challenge");
@@ -454,9 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Update header if needed
                         const header = document.querySelector('h1');
                         if (header) {
-                            header.textContent = `WORDLE #42`;
+                            header.textContent = `WORDLE #${getCurrentWordleNumber()}`;
                         }
-                        document.title = `Wordle #42`;
+                        document.title = `Wordle #${getCurrentWordleNumber()}`;
                         
                         // Show the stats modal after a short delay
                         const statsDelayId = setTimeout(() => {
@@ -471,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Switch to daily mode with either in-progress or new game
                     gameMode = "daily";
                     modeToggle.innerHTML = "📅";
-                    modeToggle.title = `Today's Wordle (#42)`;
+                    modeToggle.title = `Today's Wordle (#${getCurrentWordleNumber()})`;
                     wordOfTheDay = getDailyWord();
                     
                     if (inProgressState) {
@@ -488,9 +371,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Update header if needed
                     const header = document.querySelector('h1');
                     if (header) {
-                        header.textContent = `WORDLE #42`;
+                        header.textContent = `WORDLE #${getCurrentWordleNumber()}`;
                     }
-                    document.title = `Wordle #42`;
+                    document.title = `Wordle #${getCurrentWordleNumber()}`;
                 }
             }
         });
@@ -802,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show a different message depending on the game mode
         let modeText = '';
         if (gameMode === 'daily') {
-            modeText = `Today's Wordle (#42)`;
+            modeText = `Today's Wordle (#${getCurrentWordleNumber()})`;
         } else if (gameMode === 'previous' && numberParam) {
             modeText = `Wordle #${numberParam}`;
         } else {
@@ -931,72 +814,20 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Get today's word based on the date
+    // Get today's word - deterministic, identical for every visitor
     function getDailyWord() {
-        // Always return ABACK for today's Wordle (#42)
-        if (getCurrentWordleNumber() === 42) {
-            return "ABACK";
-        }
-        
-        // For any other day, use the standard algorithm
-        return getWordForDate(today);
+        return getSolutionForDate(todayStr);
     }
     
-    // Get a word for a specific past date (for previous Wordles)
+    // Get the word for a specific past date - also deterministic
     function getPreviousWord(dateString) {
-        const date = new Date(dateString);
-        return getWordForDate(date);
-    }
-    
-    // Get a word for a specific date
-    function getWordForDate(date) {
-        // Ensure date is normalized to midnight
-        const normalizedDate = new Date(date);
-        normalizedDate.setHours(0, 0, 0, 0);
-        
-        // Format the date as YYYY-MM-DD
-        const dateStr = normalizedDate.toISOString().split('T')[0];
-        
-        // Check for word overrides first - this ensures our 41 history words and #42 ABACK are used
-        const overrides = JSON.parse(localStorage.getItem('wordleOverrides') || '{}');
-        if (overrides[dateStr]) {
-            return overrides[dateStr];
-        }
-        
-        // Get the first Wordle date from localStorage
-        const firstWordleDate = localStorage.getItem('firstWordleDate');
-        
-        // If no first date is stored, use today
-        const firstDate = firstWordleDate ? new Date(firstWordleDate) : normalizedDate;
-        firstDate.setHours(0, 0, 0, 0);
-        
-        const msInDay = 86400000;
-        let daysSinceStart = 0;
-        
-        // Calculate days between the target date and first Wordle date
-        if (normalizedDate < firstDate) {
-            // Dates before the first Wordle shouldn't be accessible,
-            // but we handle it by using a modulo of the absolute difference
-            daysSinceStart = Math.floor((firstDate - normalizedDate) / msInDay);
-            // No modulo here - we'll apply the distribution algorithm below
-        } else {
-            // Normal case: date is after or equal to first Wordle
-            daysSinceStart = Math.floor((normalizedDate - firstDate) / msInDay);
-        }
-        
-        // Use a better distribution algorithm to access all 2,309 words
-        // This implements a pseudorandom but deterministic selection based on the date
-        // The prime multiplier and modulus help ensure good distribution across the array
-        const prime = 31;
-        const wordIndex = (daysSinceStart * prime) % SOLUTION_WORDS.length;
-        
-        return SOLUTION_WORDS[wordIndex];
+        return getSolutionForDate(dateString);
     }
     
     // Check if today's daily challenge has been completed
     function checkDailyCompleted() {
         const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
-        const today = getPacificDate().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const today = todayStr; // YYYY-MM-DD format
         
         // First check if the date is in the completed list
         if (!completedDailies.includes(today)) {
@@ -1030,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mark today's daily challenge as completed
     function markDailyCompleted() {
         const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
-        const today = getPacificDate().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const today = todayStr; // YYYY-MM-DD format
         
         if (!completedDailies.includes(today)) {
             completedDailies.push(today);
@@ -1081,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save the state of the daily challenge
     function saveDailyState() {
-        const today = getPacificDate().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const today = todayStr; // YYYY-MM-DD format
         
         // Collect all the guesses
         const guesses = [];
@@ -1109,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Get the saved daily state
     function getDailyState() {
-        const today = getPacificDate().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const today = todayStr; // YYYY-MM-DD format
         const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
         
         // Check if the saved state is from today and has the correct word
@@ -1286,138 +1117,29 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTile = 0;
     }
 
-    // Function to initialize or fix the firstWordleDate if needed
-    function initializeWordleDate() {
-        console.log("Checking if Wordle initialization is needed...");
+    // One-time cleanup of storage from the old per-device word system.
+    // The old system stored a per-visitor start date and per-visitor word
+    // overrides, which meant different visitors saw different words on the
+    // same day. Words are now derived from the fixed WORDLE_EPOCH instead.
+    function migrateOldStorage() {
+        localStorage.removeItem('wordleOverrides');
+        localStorage.removeItem('firstWordleDate');
+        localStorage.removeItem('wordleVersion');
         
-        // Versioning to ensure updates get applied
-        const currentVersion = "1.3"; // Updated version to force reinitialize
-        const storedVersion = localStorage.getItem('wordleVersion');
-        
-        // Always force reinitialization to ensure consistency
-        console.log("Forcing Wordle initialization to ensure today is #42");
-        
-        // Get today in Pacific Time
-        const currentDate = getPacificDate();
-        const msInDay = 86400000;
-        
-        // Calculate the first Wordle date (exactly 41 days before today)
-        const firstWordleDate = new Date(currentDate.getTime() - (41 * msInDay));
-        firstWordleDate.setHours(0, 0, 0, 0);
-        
-        // Save the first Wordle date in YYYY-MM-DD format
-        const firstWordleDateString = firstWordleDate.toISOString().split('T')[0];
-        localStorage.setItem('firstWordleDate', firstWordleDateString);
-        console.log(`Set firstWordleDate to ${firstWordleDateString}`);
-        
-        // Store the updated version
-        localStorage.setItem('wordleVersion', currentVersion);
-        
-        // Call the full initialization function to set up words, etc.
-        autoInitializeWordleHistory();
-        
-        console.log("Initialization complete - today is now Wordle #42");
-        
-        // Double-check the Wordle number
-        const calculatedNumber = getCurrentWordleNumber();
-        console.log("Verified Wordle number:", calculatedNumber);
-        
-        if (calculatedNumber !== 42) {
-            console.error("ERROR: Initialization failed! Wordle number is still", calculatedNumber);
-        }
-    }
-
-    // Automatically initialize Wordle history for all visitors if needed
-    function autoInitializeWordleHistory() {
-        try {
-            console.log("Auto-initializing Wordle history...");
-            
-            // Get today and normalize to start of day (in Pacific Time)
-            const currentDate = getPacificDate();
-            
-            // Calculate the date for Wordle #1 (exactly 41 days before today)
-            const msInDay = 86400000;
-            const firstWordleDate = new Date(currentDate.getTime() - (41 * msInDay));
-            
-            console.log(`Calculated date for Wordle #1: ${firstWordleDate.toISOString()}`);
-            console.log(`Days difference: 41 (fixed calculation)`);
-            
-            // Store the first Wordle date
-            localStorage.setItem('firstWordleDate', firstWordleDate.toISOString().split('T')[0]);
-            console.log(`Set firstWordleDate to ${firstWordleDate.toISOString().split('T')[0]}`);
-            
-            // Create word overrides to ensure consistent solution words
-            const wordOverrides = {};
-            
-            // Make sure SOLUTION_WORDS is defined and accessible
-            if (!SOLUTION_WORDS || SOLUTION_WORDS.length === 0) {
-                console.error("SOLUTION_WORDS is not defined or empty!");
-                return false;
+        // Drop any saved games whose stored word no longer matches the
+        // deterministic word for that date, so boards saved under the old
+        // system can't collide with the new shared word history
+        const completedPrevious = JSON.parse(localStorage.getItem('completedPreviousWordles') || '[]');
+        const stillValid = completedPrevious.filter(dateStr => {
+            const state = JSON.parse(localStorage.getItem(`wordle_${dateStr}`) || '{}');
+            if (state.word === getSolutionForDate(dateStr)) {
+                return true;
             }
-            
-            console.log(`Using ${SOLUTION_WORDS.length} solution words as base`);
-            
-            // Assign word overrides for previous dates (use a deterministic algorithm)
-            const prime = 31;
-            for (let i = 0; i < 41; i++) {
-                // Create date explicitly to avoid any timezone issues
-                const date = new Date(firstWordleDate.getTime() + (i * msInDay));
-                const dateString = date.toISOString().split('T')[0];
-                
-                // Get a word using a deterministic algorithm
-                const wordIndex = (i * prime) % SOLUTION_WORDS.length;
-                const word = SOLUTION_WORDS[wordIndex];
-                
-                // Skip ABACK since we're reserving it for today (#42)
-                if (word !== 'ABACK') {
-                    wordOverrides[dateString] = word;
-                } else {
-                    // Use the next word if we hit ABACK
-                    wordOverrides[dateString] = SOLUTION_WORDS[(wordIndex + 1) % SOLUTION_WORDS.length];
-                }
-            }
-            
-            // Set today's word to ABACK explicitly
-            const todayString = currentDate.toISOString().split('T')[0];
-            wordOverrides[todayString] = 'ABACK';
-            
-            // Store word overrides
-            localStorage.setItem('wordleOverrides', JSON.stringify(wordOverrides));
-            console.log("Word overrides stored successfully with", Object.keys(wordOverrides).length, "dates");
-            
-            // Clear any existing completed games
-            localStorage.removeItem('completedDailies');
-            localStorage.removeItem('completedPreviousWordles');
-            
-            // Clear any in-progress games
-            localStorage.removeItem('dailyStateInProgress');
-            
-            // For returning visitors who may have stats, preserve them
-            // For new visitors, initialize empty stats
-            if (!localStorage.getItem('wordleStats')) {
-                const stats = {
-                    gamesPlayed: 0,
-                    gamesWon: 0,
-                    currentStreak: 0,
-                    maxStreak: 0,
-                    guesses: {
-                        1: 0,
-                        2: 0,
-                        3: 0,
-                        4: 0,
-                        5: 0,
-                        6: 0
-                    }
-                };
-                localStorage.setItem('wordleStats', JSON.stringify(stats));
-            }
-            
-            console.log("Wordle history initialization complete! Today is Wordle #42");
-            return true;
-        } catch (error) {
-            console.error("Error during initialization:", error);
+            localStorage.removeItem(`wordle_${dateStr}`);
+            localStorage.removeItem(`wordle_${dateStr}_inProgress`);
             return false;
-        }
+        });
+        localStorage.setItem('completedPreviousWordles', JSON.stringify(stillValid));
     }
 
     // Get or initialize game statistics
@@ -1443,40 +1165,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // CRITICAL FIX: Force reset daily completion status for new days
-    function forceResetDailyStatus() {
-        const completedDailies = JSON.parse(localStorage.getItem('completedDailies') || '[]');
-        const today = getPacificDate().toISOString().split('T')[0];
-        const savedState = JSON.parse(localStorage.getItem('dailyState') || '{}');
-        const todaysWord = getDailyWord();
-        
-        console.log("CHECKING DAILY STATUS:", { 
-            today,
-            "completedToday": completedDailies.includes(today),
-            "savedStateDate": savedState.date,
-            "savedStateWord": savedState.word,
-            "todaysWord": todaysWord
-        });
-        
-        // If today is in completedDailies but the saved word doesn't match today's word,
-        // it means it's a new day but we're still showing it as completed
-        if (completedDailies.includes(today)) {
-            if (!savedState.word || savedState.word !== todaysWord) {
-                // Force remove today from completedDailies
-                const updatedCompletedDailies = completedDailies.filter(date => date !== today);
-                localStorage.setItem('completedDailies', JSON.stringify(updatedCompletedDailies));
-                
-                // Force delete the dailyState
-                localStorage.removeItem('dailyState');
-                
-                console.log("FORCE RESET: Cleared daily completion status for new day");
-            }
-        }
-    }
-    
     // Save in-progress daily Wordle state
     function saveInProgressDailyState() {
-        const today = getPacificDate().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const today = todayStr; // YYYY-MM-DD format
         
         // Collect all the guesses so far
         const guesses = [];
@@ -1534,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Get in-progress daily state
     function getInProgressDailyState() {
-        const today = getPacificDate().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const today = todayStr; // YYYY-MM-DD format
         const savedState = JSON.parse(localStorage.getItem('dailyStateInProgress') || '{}');
         
         // Check if the saved state is from today and has the correct word
