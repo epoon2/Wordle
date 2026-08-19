@@ -571,15 +571,16 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTile = 0;
     }
     
-    // Check the guess against the word of the day
-    function checkGuess(guess, rowIndex) {
-        const wordCopy = wordOfTheDay.split('');
+    // Score a guess against a solution with no DOM involved.
+    // Returns an array of 'correct' | 'present' | 'absent', one per letter.
+    function scoreGuess(guess, solution) {
+        const wordCopy = solution.split('');
         const guessUpper = guess.toUpperCase();
         const results = Array(5).fill('absent');
         
         // First pass: check for correct letters
         for (let i = 0; i < 5; i++) {
-            if (guessUpper[i] === wordOfTheDay[i]) {
+            if (guessUpper[i] === solution[i]) {
                 results[i] = 'correct';
                 wordCopy[i] = null; // Mark as used
             }
@@ -595,6 +596,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
+        
+        return results;
+    }
+    
+    // Check the guess against the word of the day and color the board
+    function checkGuess(guess, rowIndex) {
+        const results = scoreGuess(guess, wordOfTheDay);
         
         // Apply the results with an animation - use the provided row index
         for (let i = 0; i < 5; i++) {
