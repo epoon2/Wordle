@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentRow = 0;
     let currentTile = 0;
     let isGameOver = false;
+    let gameWon = false;
     let gameStats = loadStats();
     
     // Update UI to show Wordle number if applicable
@@ -474,13 +475,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Check if the game is over
         if (guess.toUpperCase() === wordOfTheDay) {
-            gameStats.gamesWon++;
-            gameStats.currentStreak++;
-            gameStats.maxStreak = Math.max(gameStats.maxStreak, gameStats.currentStreak);
+            gameWon = true;
             
-            // Fix the off-by-one error: currentRow is zero-indexed, but our guess counts are 1-indexed
-            // Add 1 to correctly record which guess number the word was solved on
-            gameStats.guesses[currentRow + 1]++;
+            // Random games don't count toward stats
+            if (gameMode !== "random") {
+                gameStats.gamesPlayed++;
+                gameStats.gamesWon++;
+                
+                // currentRow is zero-indexed, guess counts are 1-indexed
+                gameStats.guessDistribution[currentRow + 1]++;
+                
+                // Streaks track the daily Wordle only, and continue only
+                // if yesterday's daily was also won
+                if (gameMode === "daily") {
+                    const yesterdayStr = getDateForWordleNumber(getCurrentWordleNumber() - 1);
+                    gameStats.currentStreak = (gameStats.lastWinDate === yesterdayStr)
+                        ? gameStats.currentStreak + 1
+                        : 1;
+                    gameStats.lastWinDate = todayStr;
+                    gameStats.maxStreak = Math.max(gameStats.maxStreak, gameStats.currentStreak);
+                }
+                
+                saveStats(gameStats);
+            }
             
             // If in daily mode, mark as completed and save the state
             if (gameMode === "daily") {
@@ -492,8 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 savePreviousState(dateParam);
             }
             
-            saveStats(gameStats);
-            
             const winTimeoutId = setTimeout(() => {
                 showMessage("You win!");
                 displayStats();
@@ -504,8 +519,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             isGameOver = true;
         } else if (currentRow >= 5) { // Check if this is the last row (index 5)
-            gameStats.currentStreak = 0;
-            saveStats(gameStats);
+            gameWon = false;
+            
+            // Random games don't count toward stats
+            if (gameMode !== "random") {
+                gameStats.gamesPlayed++;
+                
+                // A lost daily breaks the streak
+                if (gameMode === "daily") {
+                    gameStats.currentStreak = 0;
+                }
+                
+                saveStats(gameStats);
+            }
             
             // If in daily mode, still save the loss state
             if (gameMode === "daily") {
@@ -630,24 +656,31 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load stats from local storage
     function loadStats() {
-        const stats = localStorage.getItem('wordleStats');
-        if (stats) {
-            return JSON.parse(stats);
-        } else {
-            // Default stats object
-            return {
-                gamesPlayed: 0,
-                gamesWon: 0,
-                currentStreak: 0,
-                maxStreak: 0,
-                guesses: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
-            };
+        const raw = localStorage.getItem('wordleStats');
+        if (raw) {
+            const stats = JSON.parse(raw);
+            // Migrate stats saved by the old version, which stored the
+            // distribution under the name "guesses"
+            if (stats.guesses && !stats.guessDistribution) {
+                stats.guessDistribution = stats.guesses;
+                delete stats.guesses;
+            }
+            return stats;
         }
+        // Default stats object
+        return {
+            gamesPlayed: 0,
+            gamesWon: 0,
+            currentStreak: 0,
+            maxStreak: 0,
+            lastWinDate: null,
+            guessDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+        };
     }
     
-    // Save stats to local storage
+    // Save stats to local storage. Saving is just saving - the counters
+    // are updated explicitly where games actually finish.
     function saveStats(stats) {
-        stats.gamesPlayed++;
         localStorage.setItem('wordleStats', JSON.stringify(stats));
     }
     
@@ -656,28 +689,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const statsModal = document.getElementById('stats-modal');
         statsModal.style.display = 'flex';
         
-        // Get the current stats
-        const stats = getStats();
+        // The stats shown are the same object the game updates
+        const stats = gameStats;
         
-        // Update the display
-        document.getElementById('games-played').textContent = stats.gamesPlayed;
-        document.getElementById('win-percentage').textContent = Math.round((stats.gamesWon / Math.max(stats.gamesPlayed, 1)) * 100);
-        document.getElementById('current-streak').textContent = stats.currentStreak;
-        document.getElementById('max-streak').textContent = stats.maxStreak;
-        
-        // Update the guess distribution graph
+        // Used to scale the guess distribution bars
         const maxValue = Math.max(...Object.values(stats.guessDistribution));
-        for (let i = 1; i <= 6; i++) {
-            const count = stats.guessDistribution[i] || 0;
-            const bar = document.getElementById(`guess-${i}`);
-            const barValue = document.getElementById(`guess-${i}-value`);
-            barValue.textContent = count;
-            if (maxValue > 0) {
-                bar.style.width = `${(count / maxValue) * 100}%`;
-            } else {
-                bar.style.width = '0%';
-            }
-        }
         
         // Get the modal content for displaying result
         const modalContent = document.getElementById('stats-content');
@@ -757,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             ${isGameOver ? `<div class="game-result">
                 <p>${modeText} ${wordOfTheDay}</p>
-                <p>${currentRow <= 6 && currentRow > 0 ? `Completed in ${currentRow} ${currentRow === 1 ? 'guess' : 'guesses'}` : 'Not completed'}</p>
+                <p>${gameWon ? `Completed in ${currentRow} ${currentRow === 1 ? 'guess' : 'guesses'}` : 'Not completed'}</p>
             </div>` : ''}
             
             ${actionButtons}
@@ -1014,6 +1030,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Restore the state of a previously played daily challenge
     function restoreDailyState(state) {
         cancelAnimations();
+        gameWon = state.won === true;
         
         // Use the same thorough board cleaning as in restartGame
         // First clear the board completely
@@ -1067,6 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Restore the state of a previously played previous Wordle
     function restorePreviousState(state) {
         cancelAnimations();
+        gameWon = state.won === true;
         
         // Use the same thorough board cleaning as in restartGame
         // First clear the board completely
@@ -1125,6 +1143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('wordleOverrides');
         localStorage.removeItem('firstWordleDate');
         localStorage.removeItem('wordleVersion');
+        localStorage.removeItem('gameStats');
         
         // Drop any saved games whose stored word no longer matches the
         // deterministic word for that date, so boards saved under the old
@@ -1140,29 +1159,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         });
         localStorage.setItem('completedPreviousWordles', JSON.stringify(stillValid));
-    }
-
-    // Get or initialize game statistics
-    function getStats() {
-        const gameStats = localStorage.getItem('gameStats');
-        if (gameStats) {
-            return JSON.parse(gameStats);
-        } else {
-            return {
-                gamesPlayed: 0,
-                gamesWon: 0,
-                currentStreak: 0,
-                maxStreak: 0,
-                guessDistribution: {
-                    1: 0,
-                    2: 0,
-                    3: 0,
-                    4: 0,
-                    5: 0,
-                    6: 0
-                }
-            };
-        }
     }
 
     // Save in-progress daily Wordle state
