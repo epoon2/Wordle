@@ -600,6 +600,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return results;
     }
     
+    // Read the submitted guesses back off the board
+    function getBoardGuesses() {
+        const guesses = [];
+        for (let i = 0; i < 6; i++) {
+            let rowGuess = '';
+            for (let j = 0; j < 5; j++) {
+                const tile = document.getElementById(`tile-${i}-${j}`);
+                rowGuess += tile.dataset.letter || '';
+            }
+            if (rowGuess.length === 5) {
+                guesses.push(rowGuess);
+            }
+        }
+        return guesses;
+    }
+    
+    // Build the shareable emoji grid for the finished game
+    function buildShareText() {
+        const guesses = getBoardGuesses();
+        const count = gameWon ? guesses.length : 'X';
+        const header = gameMode === 'random'
+            ? `Wordle ${count}/6`
+            : `Wordle #${wordleNumber} ${count}/6`;
+        const rows = guesses.map(g =>
+            scoreGuess(g, wordOfTheDay).map(r =>
+                r === 'correct' ? '🟩' : r === 'present' ? '🟨' : '⬛'
+            ).join('')
+        );
+        return [header, ...rows].join('\n');
+    }
+    
     // Check the guess against the word of the day and color the board
     function checkGuess(guess, rowIndex) {
         const results = scoreGuess(guess, wordOfTheDay);
@@ -730,6 +761,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Always show Random Play and Previous Wordles buttons after game is over
             actionButtons = `
                 <div class="stats-action-buttons">
+                    <button id="stats-share-btn" class="action-button">
+                        <span class="icon">📋</span> Share
+                    </button>
                     <button id="stats-random-btn" class="action-button">
                         <span class="icon">🎲</span> Random Play
                     </button>
@@ -811,6 +845,15 @@ document.addEventListener('DOMContentLoaded', () => {
             previousButton.addEventListener('click', () => {
                 // Open index.html with the previous parameter
                 window.location.href = 'index.html#previous';
+            });
+            
+            const shareButton = document.getElementById('stats-share-btn');
+            shareButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(buildShareText()).then(() => {
+                    showMessage("Copied results to clipboard");
+                }).catch(() => {
+                    showMessage("Could not copy to clipboard");
+                });
             });
         }
         
