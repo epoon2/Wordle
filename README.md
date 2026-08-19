@@ -4,11 +4,23 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 
 ## Features
 
-- Daily word challenges
-- Keyboard input with visual feedback
-- Game state persistence
-- Mobile-responsive design
-- Statistics tracking
+- Daily word challenge, identical for every player, with a new word at midnight Pacific
+- Full archive of previous daily Wordles, playable any time
+- No replaying a finished daily - completed boards are locked and restored on revisit
+- Progress saving for unfinished games (daily and archived), restored on reload
+- Statistics: games played, win %, current and max daily streak, guess distribution
+- Shareable emoji result grid, copied to the clipboard
+- Random practice mode that never affects your stats
+- Keyboard input with visual feedback, mobile-responsive design
+
+## How the daily word works
+
+Every date maps to exactly one solution word. The date of Wordle #1 is a fixed
+constant (`WORDLE_EPOCH` in `src/daily.js`); the word for any date is derived
+from the number of days since that epoch, so every visitor on every device sees
+the same word on the same day - including for past days in the archive. Days
+roll over at midnight Pacific Time, and all date arithmetic is done in UTC so
+daylight-saving transitions can never shift the calendar.
 
 ## Technologies Used
 
