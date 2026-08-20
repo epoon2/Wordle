@@ -12,6 +12,63 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 - Shareable emoji result grid, copied to the clipboard
 - Random practice mode that never affects your stats
 - Keyboard input with visual feedback, mobile-responsive design
+- **Wordle Duel**: head-to-head multiplayer with room codes, live opponent
+  boards, and a points system that rewards fewer guesses and faster solves
+
+## Multiplayer (Wordle Duel)
+
+Two players race to solve the same hidden word. Create a match to get a
+6-character room code (or a shareable invite link), have a friend join, and
+a synchronized countdown starts the round on both screens at once.
+
+During the match you can watch your opponent's board fill in - colors only,
+never their letters. Scoring rewards guessing well over typing fast:
+
+- **600 points** for solving the word (0 if you fail)
+- **+100 points** for every unused guess (solve in 1 = 600, in 6 = 100)
+- **Speed bonus** starting at 300, dropping 1 per second, floor 0
+- Ties break on fewer guesses, then the faster solve
+
+The server is the only place the solution exists during a match. It picks
+the word, validates every guess, and returns only color patterns; the word
+is revealed to the clients only after both players finish. Match state
+lives in Netlify Blobs, laid out so each player writes only their own data
+- two simultaneous submissions can never overwrite each other.
+
+Multiplayer requires the Netlify deployment (below). On a static host such
+as GitHub Pages, the solo game works fully and the Duel lobby will report
+that it cannot reach the game server.
+
+## Deployment
+
+The site is static plus serverless functions, configured by `netlify.toml`:
+
+1. On [Netlify](https://app.netlify.com), choose **Add new site → Import an
+   existing project** and pick this GitHub repository.
+2. Accept the detected settings (no build command, publish directory `.`,
+   functions in `netlify/functions`). Netlify installs `@netlify/blobs`
+   from `package.json` during deploy.
+3. Every push to `main` redeploys automatically.
+
+## Development and tests
+
+No npm install is needed locally. From the repo root:
+
+```bash
+# one-time: install the in-memory Blobs shim for local runs
+node tests/harness/install-shim.mjs
+
+# unit + API integration tests (word scoring parity, match flow,
+# concurrency, forfeits, rematch)
+node --test tests/game.test.mjs tests/functions.test.mjs
+
+# local dev server: static site + multiplayer API in one process
+node tests/harness/server.mjs
+# then open http://localhost:8888 (two windows to play both sides)
+
+# full two-browser end-to-end duel (requires Python + playwright)
+python3 tests/e2e-duel.py
+```
 
 ## How the daily word works
 
