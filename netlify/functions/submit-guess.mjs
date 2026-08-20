@@ -34,6 +34,14 @@ export default async (req) => {
     const me = slot === 'p1' ? p1 : p2;
     if (playerFinished(me)) return errorResponse('You have already finished');
 
+    // Optimistic concurrency check: the client says which row it thinks
+    // it is submitting. A duplicate or out-of-order submission (double
+    // Enter, a second tab) is rejected instead of silently racing the
+    // read-modify-write on this player's blob.
+    if (body.rowIndex !== undefined && body.rowIndex !== me.rows.length) {
+        return errorResponse('Out of sync - refresh the match', 409);
+    }
+
     if (!isValidGuess(body.guess)) return errorResponse('Not in word list');
     const guess = body.guess.toUpperCase();
 

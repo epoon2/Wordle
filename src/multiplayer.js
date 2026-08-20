@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         inputLocked = true;
         try {
-            const result = await post('/api/submit-guess', { code, playerId, guess });
+            const result = await post('/api/submit-guess', { code, playerId, guess, rowIndex: currentRow });
             paintRow(currentRow, guess, result.pattern);
             currentRow++;
             currentTile = 0;
