@@ -1,0 +1,9 @@
+{
+  "name": "wordle",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Wordle clone with a shared daily puzzle and head-to-head multiplayer",
+  "dependencies": {
+    "@netlify/blobs": "^11.0.1"
+  }
+}

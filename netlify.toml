@@ -1,0 +1,10 @@
+# Netlify deployment configuration.
+# The site is static (no build step); multiplayer runs on serverless
+# functions in netlify/functions, which declare their own /api/* routes.
+
+[build]
+  publish = "."
+  command = ""
+
+[functions]
+  directory = "netlify/functions"
