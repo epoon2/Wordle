@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Duel</title>
+    <link rel="stylesheet" href="src/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Clear+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <div class="menu-left">
+                <a href="index.html" class="icon-button">🏠</a>
+            </div>
+            <h1>WORDLE DUEL</h1>
+            <div class="menu-right">
+                <button id="how-button" class="icon-button">?</button>
+            </div>
+        </header>
+
+        <!-- Lobby: create or join -->
+        <div id="view-lobby" class="mp-view">
+            <div class="mp-card">
+                <h2>Challenge a friend</h2>
+                <p>Same secret word, same clock. Fewer guesses and faster solves score more points.</p>
+                <button id="create-button" class="mp-primary-button">Create a match</button>
+            </div>
+            <div class="mp-card">
+                <h2>Join a match</h2>
+                <div class="mp-join-row">
+                    <input id="join-code" class="mp-code-input" maxlength="6" placeholder="ROOM CODE"
+                           autocomplete="off" autocapitalize="characters" spellcheck="false">
+                    <button id="join-button" class="mp-primary-button">Join</button>
+                </div>
+            </div>
+            <p id="lobby-error" class="mp-error"></p>
+        </div>
+
+        <!-- Waiting room -->
+        <div id="view-waiting" class="mp-view" style="display: none;">
+            <div class="mp-card">
+                <h2>Room code</h2>
+                <div id="room-code" class="mp-room-code"></div>
+                <button id="copy-link-button" class="mp-secondary-button">Copy invite link</button>
+                <p class="mp-muted">Waiting for your opponent to join…</p>
+                <button id="cancel-button" class="mp-text-button">Cancel</button>
+            </div>
+        </div>
+
+        <!-- The match -->
+        <div id="view-game" class="mp-view" style="display: none;">
+            <div id="match-status" class="mp-status"></div>
+            <div id="countdown-overlay" class="mp-countdown" style="display: none;"></div>
+            <div class="mp-boards">
+                <div class="mp-own">
+                    <div id="board"></div>
+                </div>
+                <div class="mp-opponent">
+                    <div class="mp-opponent-label">Opponent</div>
+                    <div id="opp-board" class="mp-mini-board"></div>
+                    <div id="opp-status" class="mp-muted"></div>
+                </div>
+            </div>
+            <div id="keyboard-container">
+                <div class="keyboard-row">
+                    <button data-key="q">q</button><button data-key="w">w</button><button data-key="e">e</button><button data-key="r">r</button><button data-key="t">t</button><button data-key="y">y</button><button data-key="u">u</button><button data-key="i">i</button><button data-key="o">o</button><button data-key="p">p</button>
+                </div>
+                <div class="keyboard-row">
+                    <div class="spacer half"></div>
+                    <button data-key="a">a</button><button data-key="s">s</button><button data-key="d">d</button><button data-key="f">f</button><button data-key="g">g</button><button data-key="h">h</button><button data-key="j">j</button><button data-key="k">k</button><button data-key="l">l</button>
+                    <div class="spacer half"></div>
+                </div>
+                <div class="keyboard-row">
+                    <button data-key="enter" class="wide-button">Enter</button>
+                    <button data-key="z">z</button><button data-key="x">x</button><button data-key="c">c</button><button data-key="v">v</button><button data-key="b">b</button><button data-key="n">n</button><button data-key="m">m</button>
+                    <button data-key="del" class="wide-button">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="view-results" class="mp-view" style="display: none;">
+            <div class="mp-card">
+                <h2 id="result-banner"></h2>
+                <p class="mp-word-reveal">The word was <strong id="result-word"></strong></p>
+                <table class="mp-score-table">
+                    <thead>
+                        <tr><th></th><th>You</th><th>Opponent</th></tr>
+                    </thead>
+                    <tbody id="score-rows"></tbody>
+                </table>
+                <div class="mp-result-actions">
+                    <button id="rematch-button" class="mp-primary-button">Rematch</button>
+                    <button id="lobby-button" class="mp-text-button">Back to lobby</button>
+                </div>
+                <p id="rematch-status" class="mp-muted"></p>
+            </div>
+        </div>
+
+        <div id="message-container"></div>
+    </div>
+
+    <!-- How to play modal -->
+    <div id="how-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="how-close">&times;</span>
+            <h2>WORDLE DUEL</h2>
+            <div class="help-content">
+                <p>You and your opponent race to solve the same hidden word.</p>
+                <p>You can see the colors of their guesses, but never the letters.</p>
+                <p><strong>Scoring:</strong> 600 points for solving the word, plus 100 points for every unused guess, plus a speed bonus that starts at 300 and drops by 1 every second.</p>
+                <p>Fail to solve it and you score 0. Ties go to fewer guesses, then to the faster solve.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="src/words.js"></script>
+    <script src="src/multiplayer.js"></script>
+</body>
+</html>
