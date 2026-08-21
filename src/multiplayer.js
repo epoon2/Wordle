@@ -86,6 +86,84 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ---------------------------------------------------------------
+    // Duel record
+    // ---------------------------------------------------------------
+    // Kept in localStorage on this device. There is no account system and
+    // room codes are one-shot, so no honest per-opponent record is
+    // possible - these totals cover every opponent together.
+    const STATS_KEY = 'duelStats';
+    const RECORDED_LIMIT = 50;
+
+    function emptyStats() {
+        return { played: 0, won: 0, lost: 0, drawn: 0, solved: 0, guessTotal: 0, bestScore: 0, recorded: [] };
+    }
+
+    function loadStats() {
+        let saved;
+        try {
+            saved = JSON.parse(localStorage.getItem(STATS_KEY));
+        } catch (e) { /* unreadable or disabled storage */ }
+        const stats = emptyStats();
+        if (!saved || typeof saved !== 'object') return stats;
+        Object.keys(stats).forEach(key => {
+            if (key === 'recorded') {
+                if (Array.isArray(saved.recorded)) stats.recorded = saved.recorded.slice(-RECORDED_LIMIT);
+            } else if (Number.isFinite(saved[key])) {
+                stats[key] = saved[key];
+            }
+        });
+        return stats;
+    }
+
+    function saveStats(stats) {
+        try {
+            localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+        } catch (e) { /* private mode: the record just does not persist */ }
+    }
+
+    // Record a finished match once. Reloading the results screen replays
+    // the same state, so the room code is the guard against double counting.
+    function recordResult(state) {
+        const stats = loadStats();
+        if (!code || stats.recorded.includes(code)) return;
+
+        stats.played += 1;
+        if (state.result === 'win') stats.won += 1;
+        else if (state.result === 'loss') stats.lost += 1;
+        else stats.drawn += 1;
+
+        const score = state.yourScore;
+        if (score) {
+            if (score.solved) {
+                stats.solved += 1;
+                stats.guessTotal += score.guesses;
+            }
+            if (score.total > stats.bestScore) stats.bestScore = score.total;
+        }
+
+        stats.recorded = [...stats.recorded, code].slice(-RECORDED_LIMIT);
+        saveStats(stats);
+        renderStats();
+    }
+
+    function renderStats() {
+        const stats = loadStats();
+        const winPct = stats.played ? Math.round((stats.won / stats.played) * 100) : 0;
+        const avg = stats.solved ? (stats.guessTotal / stats.solved).toFixed(1) : '\u2013';
+        const item = (id, value, label) =>
+            `<div class="stat-item"><div id="${id}" class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`;
+        document.getElementById('duel-stats').innerHTML =
+            item('duel-played', stats.played, 'Played')
+            + item('duel-won', stats.won, 'Won')
+            + item('duel-lost', stats.lost, 'Lost')
+            + item('duel-win-pct', winPct, 'Win %');
+        document.getElementById('duel-stats-extra').innerHTML =
+            item('duel-drawn', stats.drawn, 'Drawn')
+            + item('duel-avg-guesses', avg, 'Avg guesses')
+            + item('duel-best-score', stats.bestScore, 'Best score');
+    }
+
+    // ---------------------------------------------------------------
     // Series score
     // ---------------------------------------------------------------
     // The server owns the tally and hands each player their own view of
@@ -417,6 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
         phase = 'finished';
         inputLocked = true;
         stopTicking();
+        recordResult(state);
 
         const banner = document.getElementById('result-banner');
         if (state.result === 'win') banner.textContent = state.forfeit ? 'You win by forfeit! 🏆' : 'You win! 🏆';
@@ -574,6 +653,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------------------------------------------------------------
     // Entry: invite link, resumed session, or plain lobby
     // ---------------------------------------------------------------
+    renderStats();
+
     const inviteCode = new URLSearchParams(location.search).get('join');
     const saved = loadSession();
     if (inviteCode) {

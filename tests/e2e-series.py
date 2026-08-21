@@ -148,6 +148,34 @@ async def run_test():
         await wait_for_series(bob, "#series-line", f"Round 3 · You 1 {DASH} 2")
         print("round 3 to alice, series 2-1 on both screens")
 
+        # --- The device-local duel record on the lobby ---
+        # A reload replays the same finished state; the record must not
+        # count the round twice.
+        await alice.reload()
+        await wait_visible(alice, "#view-results")
+        for page in (alice, bob):
+            await page.click("#lobby-button")
+            await wait_visible(page, "#view-lobby")
+
+        async def record(page):
+            return await page.evaluate(
+                "Object.fromEntries(Array.from(document.querySelectorAll('#view-lobby .stat-item'))"
+                ".map(i => [i.querySelector('.stat-value').id, i.querySelector('.stat-value').textContent]))")
+
+        alice_record = await record(alice)
+        bob_record = await record(bob)
+        assert alice_record["duel-played"] == "3", alice_record
+        assert alice_record["duel-won"] == "2", alice_record
+        assert alice_record["duel-lost"] == "1", alice_record
+        assert alice_record["duel-win-pct"] == "67", alice_record
+        assert alice_record["duel-avg-guesses"] == "1.3", alice_record
+        assert int(alice_record["duel-best-score"]) > 1000, alice_record
+        assert bob_record["duel-played"] == "3", bob_record
+        assert bob_record["duel-won"] == "1", bob_record
+        assert bob_record["duel-lost"] == "2", bob_record
+        assert bob_record["duel-avg-guesses"] == "1.7", bob_record
+        print("duel records:", alice_record, bob_record)
+
         real_errors = [e for e in errors if "fonts.g" not in e and "ERR_CONNECTION" not in e]
         assert not real_errors, real_errors
         print("NO console errors - e2e series PASSED")

@@ -591,6 +591,14 @@ h1 {
     min-height: 1.2em;
 }
 
+.mp-card .stats-numbers {
+    margin-bottom: 8px;
+}
+
+.mp-card .stat-value {
+    font-size: 28px;
+}
+
 .mp-series {
     font-size: 14px;
     font-weight: 700;
