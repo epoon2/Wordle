@@ -4,7 +4,8 @@
 // match is decided - the word, both scores, and the result.
 
 import {
-    evaluateMatch, normalizeCode, isValidCode, jsonResponse, errorResponse
+    evaluateMatch, seriesOf, tallyWith,
+    normalizeCode, isValidCode, jsonResponse, errorResponse
 } from './lib/game.mjs';
 import { readMeta, readPlayer, slotFor } from './lib/store.mjs';
 
@@ -28,10 +29,23 @@ export default async (req) => {
     const verdict = evaluateMatch(meta, p1, p2, now);
     const status = verdict.status;
 
+    // The series score, told from this caller's side. It always covers
+    // every round whose result is known, so it gains the current round the
+    // moment that round is decided - the same tally rematch will store on
+    // the successor room, which is why both screens can never disagree.
+    const series = seriesOf(meta);
+    const tally = tallyWith(series, verdict.winner);
+
     const response = {
         status,
         startAt: meta.startAt,
         serverNow: now,
+        series: {
+            round: series.round,
+            you: tally.wins[series.sides[slot]],
+            opponent: tally.wins[series.sides[oppSlot]],
+            draws: tally.draws
+        },
         nextCode: meta.nextCode,
         you: me ? {
             rows: me.rows.map(r => ({ guess: r.guess, pattern: r.pattern })),

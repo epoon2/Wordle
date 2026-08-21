@@ -3,7 +3,7 @@
 // The word is stored server-side only and never appears in any response
 // until the match is over.
 
-import { randomCode, randomSolution, jsonResponse, errorResponse } from './lib/game.mjs';
+import { randomCode, randomSolution, newSeries, jsonResponse, errorResponse } from './lib/game.mjs';
 import { readMeta, writeMeta, writePlayer, emptyPlayer } from './lib/store.mjs';
 
 export default async (req) => {
@@ -28,7 +28,8 @@ export default async (req) => {
         startAt: null,
         p1Id: playerId,
         p2Id: null,
-        nextCode: null
+        nextCode: null,
+        series: newSeries()
     };
 
     await writeMeta(code, meta);

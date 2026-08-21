@@ -98,6 +98,47 @@ export function playerFinished(player) {
     return Boolean(player.solvedAt) || player.failed === true || player.rows.length >= MAX_GUESSES;
 }
 
+// ---------------------------------------------------------------------
+// Series: the running score across a chain of rematches.
+//
+// Every round is its own room with its own player ids, and the player who
+// clicks Rematch becomes p1 of the successor - so slots are not stable
+// across rounds. The tally is therefore kept against two abstract sides,
+// 'a' and 'b', and each room's meta records which slot holds which side.
+// ---------------------------------------------------------------------
+
+export function newSeries() {
+    return { round: 1, sides: { p1: 'a', p2: 'b' }, wins: { a: 0, b: 0 }, draws: 0 };
+}
+
+// Rooms created before series tracking existed have no series field.
+export function seriesOf(meta) {
+    return meta.series || newSeries();
+}
+
+// The tally including the round just played. winner is 'p1' | 'p2' |
+// 'draw', or null while the round is still undecided.
+export function tallyWith(series, winner) {
+    const wins = { ...series.wins };
+    let draws = series.draws;
+    if (winner === 'draw') draws += 1;
+    else if (winner) wins[series.sides[winner]] += 1;
+    return { wins, draws };
+}
+
+// The series a successor room starts with. hostSlot is the slot the player
+// who asked for the rematch held in the finished room; they become p1.
+export function successorSeries(series, hostSlot, winner) {
+    const guestSlot = hostSlot === 'p1' ? 'p2' : 'p1';
+    const { wins, draws } = tallyWith(series, winner);
+    return {
+        round: series.round + 1,
+        sides: { p1: series.sides[hostSlot], p2: series.sides[guestSlot] },
+        wins,
+        draws
+    };
+}
+
 // The whole read-time verdict on a match: what phase it is in and, once it
 // is over, who won and with what scores. match-state and rematch both need
 // this and must never disagree about it, so it lives in one place.

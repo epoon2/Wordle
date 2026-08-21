@@ -9,7 +9,7 @@ import joinMatch from '../netlify/functions/join-match.mjs';
 import submitGuess from '../netlify/functions/submit-guess.mjs';
 import matchState from '../netlify/functions/match-state.mjs';
 import rematch from '../netlify/functions/rematch.mjs';
-import { readMeta, writeMeta } from '../netlify/functions/lib/store.mjs';
+import { readMeta, writeMeta, readPlayer, writePlayer } from '../netlify/functions/lib/store.mjs';
 
 const BASE = 'http://localhost';
 
@@ -181,7 +181,6 @@ test('forfeit: an abandoned match finishes in favor of the finished player', asy
     meta.createdAt -= 11 * 60 * 1000;
     meta.startAt -= 11 * 60 * 1000;
     await writeMeta(code, meta);
-    const { readPlayer, writePlayer } = await import('../netlify/functions/lib/store.mjs');
     const player1 = await readPlayer(code, 'p1');
     player1.rows.forEach(row => { row.t -= 11 * 60 * 1000; });
     player1.solvedAt -= 11 * 60 * 1000;
@@ -222,4 +221,115 @@ test('rematch: second requester converges on the first rematch room', async () =
     assert.equal(typeof newMeta.word, 'string');
     assert.equal(newMeta.word.length, 5);
     assert.ok(word.length === 5);
+});
+
+// ----- Best-of-N series across a chain of rematches -----
+
+// Play a decided round: p1 solves in 1, p2 fails out, so p1 wins.
+async function playRound(code, p1, p2, word, winnerSlot = 'p1') {
+    const winner = winnerSlot === 'p1' ? p1 : p2;
+    const loser = winnerSlot === 'p1' ? p2 : p1;
+    await call(submitGuess, { body: { code, playerId: winner, guess: word } });
+    for (let i = 0; i < 6; i++) {
+        await call(submitGuess, { body: { code, playerId: loser, guess: 'LYMPH' } });
+    }
+}
+
+// Take the winner of a finished round into the next one, returning the
+// successor room with both players seated and its countdown already over.
+async function startRematch(code, requesterId, otherId) {
+    const first = (await call(rematch, { body: { code, playerId: requesterId } })).body;
+    const second = (await call(rematch, { body: { code, playerId: otherId } })).body;
+    assert.equal(second.nextCode, first.nextCode);
+    const joined = (await call(joinMatch, { body: { code: first.nextCode } })).body;
+    const meta = await readMeta(first.nextCode);
+    meta.startAt = Date.now() - 1000;
+    meta.word = 'CRANE';
+    await writeMeta(first.nextCode, meta);
+    return { code: first.nextCode, host: first.playerId, guest: joined.playerId };
+}
+
+test('series: a new room starts at round 1 with an empty tally', async () => {
+    const { code, p1, p2 } = await makeStartedMatch('CRANE');
+    const s = (await state(code, p1)).body;
+    assert.deepEqual(s.series, { round: 1, you: 0, opponent: 0, draws: 0 });
+    const s2 = (await state(code, p2)).body;
+    assert.deepEqual(s2.series, { round: 1, you: 0, opponent: 0, draws: 0 });
+});
+
+test('series: the finished round counts immediately and both sides agree', async () => {
+    const { code, p1, p2 } = await makeStartedMatch('CRANE');
+    await playRound(code, p1, p2, 'CRANE', 'p1');
+
+    const winner = (await state(code, p1)).body;
+    const loser = (await state(code, p2)).body;
+    assert.equal(winner.result, 'win');
+    assert.deepEqual(winner.series, { round: 1, you: 1, opponent: 0, draws: 0 });
+    assert.deepEqual(loser.series, { round: 1, you: 0, opponent: 1, draws: 0 });
+});
+
+test('series: the successor room inherits the tally and both players see it', async () => {
+    const { code, p1, p2 } = await makeStartedMatch('CRANE');
+    await playRound(code, p1, p2, 'CRANE', 'p1');
+
+    // The loser asks for the rematch, so the slots swap in round 2 - the
+    // tally has to follow the players, not the p1/p2 seats.
+    const round2 = await startRematch(code, p2, p1);
+    const hostView = (await state(round2.code, round2.host)).body;   // was p2
+    const guestView = (await state(round2.code, round2.guest)).body; // was p1
+    assert.deepEqual(hostView.series, { round: 2, you: 0, opponent: 1, draws: 0 });
+    assert.deepEqual(guestView.series, { round: 2, you: 1, opponent: 0, draws: 0 });
+
+    // Round 2 goes to the round 1 loser: the series is level at 1-1
+    await playRound(round2.code, round2.host, round2.guest, 'CRANE', 'p1');
+    assert.deepEqual((await state(round2.code, round2.host)).body.series,
+        { round: 2, you: 1, opponent: 1, draws: 0 });
+    assert.deepEqual((await state(round2.code, round2.guest)).body.series,
+        { round: 2, you: 1, opponent: 1, draws: 0 });
+
+    // ...and round 3 starts from 1-1
+    const round3 = await startRematch(round2.code, round2.guest, round2.host);
+    assert.deepEqual((await state(round3.code, round3.host)).body.series,
+        { round: 3, you: 1, opponent: 1, draws: 0 });
+    assert.deepEqual((await state(round3.code, round3.guest)).body.series,
+        { round: 3, you: 1, opponent: 1, draws: 0 });
+});
+
+test('series: draws are carried separately from wins', async () => {
+    const { code, p1, p2 } = await makeStartedMatch('CRANE');
+    // Both fail out: equal zero scores, so the round is a draw
+    for (let i = 0; i < 6; i++) {
+        await call(submitGuess, { body: { code, playerId: p1, guess: 'LYMPH' } });
+        await call(submitGuess, { body: { code, playerId: p2, guess: 'LYMPH' } });
+    }
+    const s = (await state(code, p1)).body;
+    assert.equal(s.result, 'draw');
+    assert.deepEqual(s.series, { round: 1, you: 0, opponent: 0, draws: 1 });
+
+    const round2 = await startRematch(code, p1, p2);
+    assert.deepEqual((await state(round2.code, round2.host)).body.series,
+        { round: 2, you: 0, opponent: 0, draws: 1 });
+});
+
+test('series: a forfeit win counts, and a dead round counts for nobody', async () => {
+    const { code, p1, p2 } = await makeStartedMatch('CRANE');
+    await call(submitGuess, { body: { code, playerId: p1, guess: 'CRANE' } });
+    const aged = await readMeta(code);
+    aged.createdAt -= 11 * 60 * 1000;
+    aged.startAt -= 11 * 60 * 1000;
+    await writeMeta(code, aged);
+    const player1 = await readPlayer(code, 'p1');
+    player1.rows.forEach(row => { row.t -= 11 * 60 * 1000; });
+    player1.solvedAt -= 11 * 60 * 1000;
+    await writePlayer(code, 'p1', player1);
+
+    assert.deepEqual((await state(code, p1)).body.series, { round: 1, you: 1, opponent: 0, draws: 0 });
+    const round2 = await startRematch(code, p1, p2);
+    assert.deepEqual((await state(round2.code, round2.host)).body.series,
+        { round: 2, you: 1, opponent: 0, draws: 0 });
+
+    // Bailing out of an undecided round advances the round but no score
+    const round3 = await startRematch(round2.code, round2.host, round2.guest);
+    assert.deepEqual((await state(round3.code, round3.host)).body.series,
+        { round: 3, you: 1, opponent: 0, draws: 0 });
 });

@@ -4,7 +4,8 @@
 // rematch time. Finish detection is computed at read time from the two
 // player blobs, so there is no read-modify-write race on shared state.
 //
-//   matches/{code}/meta  { code, word, createdAt, startAt, p1Id, p2Id, nextCode }
+//   matches/{code}/meta  { code, word, createdAt, startAt, p1Id, p2Id,
+//                          nextCode, series }
 //   matches/{code}/p1    { rows: [{ guess, pattern, t }], solvedAt, failed }
 //   matches/{code}/p2    same shape
 
