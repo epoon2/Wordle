@@ -13,7 +13,8 @@ A web-based clone of the popular word-guessing game Wordle. This project was cre
 - Random practice mode that never affects your stats
 - Keyboard input with visual feedback, mobile-responsive design
 - **Wordle Duel**: head-to-head multiplayer with room codes, live opponent
-  boards, and a points system that rewards fewer guesses and faster solves
+  boards, a points system that rewards fewer guesses and faster solves, a
+  running series score across rematches, and a personal duel record
 
 ## Multiplayer (Wordle Duel)
 
@@ -34,6 +35,34 @@ the word, validates every guess, and returns only color patterns; the word
 is revealed to the clients only after both players finish. Match state
 lives in Netlify Blobs, laid out so each player writes only their own data
 - two simultaneous submissions can never overwrite each other.
+
+### Series across rematches
+
+Hitting Rematch keeps the score going. The successor room inherits the
+tally from the room it came from, so a chain of rematches reads as one
+best-of series - `Round 3 · You 2 – 1` during the match and on the results
+screen, on both players' screens at once.
+
+The server owns the tally. Each round is its own room with its own player
+ids, and whoever asks for the rematch hosts the next room, so the score is
+kept against two sides of the series rather than the p1/p2 seats, and every
+room records which seat holds which side. A round is added to the tally the
+moment it is decided, which is why the results screen and the next room's
+scoreboard can never disagree. A round nobody finished counts for nobody.
+
+### Your duel record
+
+The lobby shows the record kept for you on that device: duels played, won,
+lost and drawn, win %, average guesses across the duels you solved, and
+your best single-match score. It is stored in `localStorage` under
+`duelStats`, so it never leaves the browser it was made in, and each match
+is counted once no matter how often the results screen is reloaded.
+
+There is deliberately no per-opponent breakdown. Duel has no accounts and
+no names: every room hands both players a fresh random id, so two duels
+against the same friend are indistinguishable from duels against two
+strangers. A per-opponent record would have to invent an identity that does
+not exist, so the record covers all opponents together instead.
 
 Multiplayer requires the Netlify deployment (below). On a static host such
 as GitHub Pages, the solo game works fully and the Duel lobby will report
@@ -68,7 +97,34 @@ node tests/harness/server.mjs
 
 # full two-browser end-to-end duel (requires Python + playwright)
 python3 tests/e2e-duel.py
+
+# two-browser series: three rounds of rematches, checking both screens
+# agree on the round number and the running score, and that the duel
+# record on each device adds up
+python3 tests/e2e-series.py
+
+# the solo game opened straight off the filesystem, with no server
+python3 tests/e2e-static.py
 ```
+
+## Word lists
+
+`solution-words.txt` (the daily answers, in a fixed order) and
+`valid-guesses.txt` (everything else the game accepts) are the only word
+data edited by hand. The two modules that actually load words are generated
+from them and should never be edited directly:
+
+```bash
+python3 tools/build-word-lists.py   # writes src/words.js and netlify/functions/lib/words.mjs
+```
+
+Both generated files pack their words five characters at a time into one
+string and split them at load time, and the guess list stores each word
+once instead of repeating the 2308 solutions. That is about half the bytes
+of the quoted arrays they replace, and it still loads as a plain script
+from `file://`, so the game keeps working offline with no build step. A
+test compares both generated lists against the txt files, and pins the
+daily words for several dates so a reordering cannot slip through.
 
 ## How the daily word works
 
