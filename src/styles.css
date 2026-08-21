@@ -591,6 +591,14 @@ h1 {
     min-height: 1.2em;
 }
 
+.mp-series {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #333;
+    min-height: 1.4em;
+}
+
 .mp-status {
     font-size: 14px;
     color: #555;

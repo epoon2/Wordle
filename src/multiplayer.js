@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let pollTimer = null;
     let tickTimer = null;
     let rematchRequested = false;
+    let series = null;        // running score across this chain of rematches
 
     // --- Board state ---
     let currentRow = 0;
@@ -82,6 +83,27 @@ document.addEventListener('DOMContentLoaded', () => {
         container.textContent = message;
         container.style.opacity = 1;
         setTimeout(() => { container.style.opacity = 0; }, 2000);
+    }
+
+    // ---------------------------------------------------------------
+    // Series score
+    // ---------------------------------------------------------------
+    // The server owns the tally and hands each player their own view of
+    // it, so the two screens cannot drift apart. It already includes the
+    // current round as soon as that round is decided.
+    function seriesText() {
+        if (!series) return '';
+        if (series.round === 1 && !series.you && !series.opponent && !series.draws) {
+            return 'Round 1';
+        }
+        const drawn = series.draws ? ` · ${series.draws} drawn` : '';
+        return `Round ${series.round} · You ${series.you} \u2013 ${series.opponent}${drawn}`;
+    }
+
+    function renderSeries() {
+        const text = seriesText();
+        document.getElementById('series-status').textContent = text;
+        document.getElementById('series-line').textContent = text;
     }
 
     // ---------------------------------------------------------------
@@ -300,6 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         clockOffset = state.serverNow - Date.now();
         startAt = state.startAt;
+        series = state.series || null;
+        renderSeries();
 
         if (state.status === 'waiting') {
             schedulePoll(POLL_MS);
@@ -446,6 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
         code = null;
         playerId = null;
         rematchRequested = false;
+        series = null;
+        renderSeries();
         stopPolling();
         stopTicking();
         clearSession();
