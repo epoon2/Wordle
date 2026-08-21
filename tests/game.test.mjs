@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
     scoreGuess, computeScore, decideWinner, randomCode, isValidCode,
-    normalizeCode, isValidGuess, playerFinished, MAX_GUESSES
+    normalizeCode, isValidGuess, playerFinished, evaluateMatch, MAX_GUESSES
 } from '../netlify/functions/lib/game.mjs';
 
 // ----- scoreGuess: the classic double-letter cases -----
@@ -133,4 +133,43 @@ test('playerFinished', () => {
     assert.ok(playerFinished({ rows: [], solvedAt: null, failed: true }));
     assert.ok(playerFinished({ rows: Array(MAX_GUESSES).fill({}), solvedAt: null, failed: false }));
     assert.ok(!playerFinished({ rows: [{}], solvedAt: null, failed: false }));
+});
+
+// ----- evaluateMatch: the shared read-time verdict -----
+
+const started = (over = {}) => ({
+    code: 'ABCDEF', word: 'CRANE', createdAt: 1000, startAt: 2000,
+    p1Id: 'one', p2Id: 'two', nextCode: null, ...over
+});
+const solvedIn = (guesses, at) => ({
+    rows: Array.from({ length: guesses }, (_, i) => ({ t: 2000 + i })),
+    solvedAt: at, failed: false
+});
+
+test('evaluateMatch reports the phase of a match', () => {
+    const empty = { rows: [], solvedAt: null, failed: false };
+    assert.equal(evaluateMatch(started({ p2Id: null, startAt: null }), empty, null, 3000).status, 'waiting');
+    assert.equal(evaluateMatch(started(), empty, empty, 1500).status, 'countdown');
+    assert.equal(evaluateMatch(started(), empty, empty, 3000).status, 'active');
+    // Nobody finished and the TTL has passed: the match just dies
+    assert.equal(evaluateMatch(started(), empty, empty, 2000 + 11 * 60 * 1000).status, 'expired');
+});
+
+test('evaluateMatch decides a finished match and flags forfeits', () => {
+    const meta = started();
+    const winner = solvedIn(2, 5000);
+    const loser = solvedIn(4, 9000);
+    const decided = evaluateMatch(meta, winner, loser, 10000);
+    assert.equal(decided.status, 'finished');
+    assert.equal(decided.winner, 'p1');
+    assert.equal(decided.forfeit, false);
+    assert.ok(decided.scores.p1.total > decided.scores.p2.total);
+
+    // p2 walked away: p1 wins by forfeit and p2 scores zero
+    const late = 2000 + 11 * 60 * 1000;
+    const abandoned = evaluateMatch(meta, winner, { rows: [], solvedAt: null, failed: false }, late);
+    assert.equal(abandoned.status, 'finished');
+    assert.equal(abandoned.forfeit, true);
+    assert.equal(abandoned.winner, 'p1');
+    assert.equal(abandoned.scores.p2.total, 0);
 });

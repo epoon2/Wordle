@@ -98,6 +98,45 @@ export function playerFinished(player) {
     return Boolean(player.solvedAt) || player.failed === true || player.rows.length >= MAX_GUESSES;
 }
 
+// The whole read-time verdict on a match: what phase it is in and, once it
+// is over, who won and with what scores. match-state and rematch both need
+// this and must never disagree about it, so it lives in one place.
+export function evaluateMatch(meta, p1, p2, now) {
+    const expired = matchExpired(meta, p1, p2, now);
+    const p1Done = p1 ? playerFinished(p1) : false;
+    const p2Done = p2 ? playerFinished(p2) : false;
+
+    let status;
+    if (!meta.p2Id) {
+        status = expired ? 'expired' : 'waiting';
+    } else if (now < meta.startAt) {
+        status = 'countdown';
+    } else if (p1Done && p2Done) {
+        status = 'finished';
+    } else if (expired) {
+        // One side walked away: whoever finished wins by forfeit.
+        // Neither finished: the match just dies.
+        status = (p1Done || p2Done) ? 'finished' : 'expired';
+    } else {
+        status = 'active';
+    }
+
+    if (status !== 'finished') {
+        return { status, expired, p1Done, p2Done, forfeit: false, winner: null, scores: null };
+    }
+
+    // Forfeit case: score the walked-away side as unfinished (0)
+    const scoreOf = (player, done) =>
+        computeScore(done ? player : { rows: player ? player.rows : [], solvedAt: null }, meta.startAt);
+    const scores = { p1: scoreOf(p1, p1Done), p2: scoreOf(p2, p2Done) };
+    return {
+        status, expired, p1Done, p2Done,
+        forfeit: expired && !(p1Done && p2Done),
+        winner: decideWinner(scores.p1, scores.p2),
+        scores
+    };
+}
+
 export function matchExpired(meta, p1, p2, now) {
     const lastActivity = Math.max(
         meta.createdAt,

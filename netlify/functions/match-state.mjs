@@ -4,8 +4,7 @@
 // match is decided - the word, both scores, and the result.
 
 import {
-    computeScore, decideWinner, playerFinished, matchExpired,
-    normalizeCode, isValidCode, jsonResponse, errorResponse
+    evaluateMatch, normalizeCode, isValidCode, jsonResponse, errorResponse
 } from './lib/game.mjs';
 import { readMeta, readPlayer, slotFor } from './lib/store.mjs';
 
@@ -26,25 +25,8 @@ export default async (req) => {
     const me = slot === 'p1' ? p1 : p2;
     const opp = slot === 'p1' ? p2 : p1;
 
-    // Phase of the match, computed at read time
-    let status;
-    const expired = matchExpired(meta, p1, p2, now);
-    const meDone = me ? playerFinished(me) : false;
-    const oppDone = opp ? playerFinished(opp) : false;
-
-    if (!meta.p2Id) {
-        status = expired ? 'expired' : 'waiting';
-    } else if (now < meta.startAt) {
-        status = 'countdown';
-    } else if (meDone && oppDone) {
-        status = 'finished';
-    } else if (expired) {
-        // One side walked away: whoever finished wins by forfeit.
-        // Neither finished: the match just dies.
-        status = (meDone || oppDone) ? 'finished' : 'expired';
-    } else {
-        status = 'active';
-    }
+    const verdict = evaluateMatch(meta, p1, p2, now);
+    const status = verdict.status;
 
     const response = {
         status,
@@ -55,32 +37,25 @@ export default async (req) => {
             rows: me.rows.map(r => ({ guess: r.guess, pattern: r.pattern })),
             solved: Boolean(me.solvedAt),
             failed: me.failed === true,
-            finished: meDone
+            finished: slot === 'p1' ? verdict.p1Done : verdict.p2Done
         } : null,
         opponent: (meta.p2Id && opp) ? {
             patterns: opp.rows.map(r => r.pattern),
             guessCount: opp.rows.length,
             solved: Boolean(opp.solvedAt),
             failed: opp.failed === true,
-            finished: oppDone
+            finished: slot === 'p1' ? verdict.p2Done : verdict.p1Done
         } : null
     };
 
     if (status === 'finished') {
-        // Forfeit case: score the walked-away side as unfinished (0)
-        const myScore = computeScore(me, meta.startAt);
-        const oppScore = oppDone ? computeScore(opp, meta.startAt) : computeScore({ rows: opp.rows, solvedAt: null }, meta.startAt);
-        const winner = decideWinner(
-            slot === 'p1' ? myScore : oppScore,
-            slot === 'p1' ? oppScore : myScore
-        );
         response.word = meta.word;
-        response.forfeit = expired && !(meDone && oppDone);
-        response.yourScore = myScore;
-        response.opponentScore = oppScore;
+        response.forfeit = verdict.forfeit;
+        response.yourScore = verdict.scores[slot];
+        response.opponentScore = verdict.scores[oppSlot];
         response.opponentRows = opp.rows.map(r => ({ guess: r.guess, pattern: r.pattern }));
-        response.result = winner === 'draw' ? 'draw'
-            : (winner === slot ? 'win' : 'loss');
+        response.result = verdict.winner === 'draw' ? 'draw'
+            : (verdict.winner === slot ? 'win' : 'loss');
     }
 
     return jsonResponse(response);
