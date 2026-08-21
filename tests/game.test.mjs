@@ -173,3 +173,53 @@ test('evaluateMatch decides a finished match and flags forfeits', () => {
     assert.equal(abandoned.winner, 'p1');
     assert.equal(abandoned.scores.p2.total, 0);
 });
+
+// ----- The generated word lists agree with their txt sources -----
+
+// The browser sources are plain scripts; run them and take the globals
+// they define, the same way a page loading them in order would see them.
+function loadBrowserScripts(paths, names) {
+    const source = paths.map(p => readFileSync(new URL(p, import.meta.url), 'utf8')).join('\n');
+    return new Function(`${source}\nreturn { ${names.join(', ')} };`)();
+}
+
+const readWordFile = name =>
+    readFileSync(new URL(`../${name}`, import.meta.url), 'utf8')
+        .split('\n').map(w => w.trim().toUpperCase()).filter(w => w.length === 5);
+
+test('browser and server word lists match solution-words.txt and valid-guesses.txt', async () => {
+    const solutions = readWordFile('solution-words.txt');
+    const validTxt = readWordFile('valid-guesses.txt');
+    const browser = loadBrowserScripts(['../src/words.js'],
+        ['SOLUTION_WORDS', 'ALL_VALID_WORDS', 'isValidWord']);
+    const server = await import('../netlify/functions/lib/words.mjs');
+
+    // Solution order is load-bearing: it is what the daily word indexes into
+    assert.deepEqual(browser.SOLUTION_WORDS, solutions);
+    assert.deepEqual(server.SOLUTION_WORDS, solutions);
+
+    const expected = new Set([...solutions, ...validTxt]);
+    assert.equal(browser.ALL_VALID_WORDS.length, expected.size, 'no word is stored twice');
+    assert.deepEqual(new Set(browser.ALL_VALID_WORDS), expected);
+    assert.deepEqual(server.VALID_WORDS, expected);
+
+    // Spot-check the two engines against each other on real lookups
+    for (const word of ['CRANE', 'ZYMIC', 'AALII', solutions.at(-1), validTxt.at(-1)]) {
+        assert.ok(browser.isValidWord(word.toLowerCase()), word);
+        assert.ok(server.VALID_WORDS.has(word), word);
+    }
+    assert.ok(!browser.isValidWord('ZZZZZ'));
+    assert.ok(!server.VALID_WORDS.has('ZZZZZ'));
+});
+
+test('repacking the word lists did not move the daily words', () => {
+    // Fixed answers from before src/words.js was repacked. The daily word is
+    // an index into SOLUTION_WORDS, so any reordering would show up here.
+    const { getSolutionForDate } = loadBrowserScripts(
+        ['../src/words.js', '../src/daily.js'], ['getSolutionForDate']);
+    assert.equal(getSolutionForDate('2025-02-23'), 'ABACK');   // Wordle #1
+    assert.equal(getSolutionForDate('2025-06-01'), 'SUSHI');
+    assert.equal(getSolutionForDate('2026-08-21'), 'RATIO');
+    assert.equal(getSolutionForDate('2027-01-01'), 'TITLE');
+    assert.equal(getSolutionForDate('2024-01-01'), 'GRASP');   // before the epoch
+});
