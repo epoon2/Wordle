@@ -78,6 +78,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+
+    // Shake the row the player is typing in: the standard signal for a
+    // rejected guess. The class is removed on animationend so a second
+    // rejection can shake again.
+    function shakeRow(rowIndex) {
+        const tile = document.getElementById(`tile-${rowIndex}-0`);
+        const row = tile ? tile.parentElement : null;
+        if (!row) return;
+        row.classList.add('shake');
+        row.addEventListener('animationend', () => row.classList.remove('shake'), { once: true });
+    }
+
     function showMessage(message) {
         const container = document.getElementById('message-container');
         container.textContent = message;
@@ -283,6 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputLocked) return;
         if (currentTile !== 5) {
             showMessage('Not enough letters');
+            shakeRow(currentRow);
             return;
         }
         let guess = '';
@@ -292,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fast local check; the server is still the authority
         if (typeof ALL_VALID_WORDS !== 'undefined' && !ALL_VALID_WORDS.includes(guess)) {
             showMessage('Not in word list');
+            shakeRow(currentRow);
             return;
         }
 
@@ -311,7 +325,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pull the new state promptly (the match may just have ended)
             pollNow();
         } catch (e) {
+            // The server is the authority: it can reject a word the local
+            // list missed, and that refusal should look like any other.
             showMessage(e.message);
+            shakeRow(currentRow);
             inputLocked = false;
         }
     }

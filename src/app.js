@@ -454,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Make sure the row is complete
         if (currentTile !== 5) {
             showMessage("Not enough letters");
+            shakeRow(currentRow);
             return;
         }
         
@@ -467,6 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Validate the guess is a real word
         if (!isValidWord(guess)) {
             showMessage("Not in word list");
+            shakeRow(currentRow);
             return;
         }
         
@@ -688,6 +690,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Display messages to the user
+
+    // Shake the row the player is typing in: the standard signal for a
+    // rejected guess. The class is removed on animationend so a second
+    // rejection can shake again.
+    function shakeRow(rowIndex) {
+        const tile = document.getElementById(`tile-${rowIndex}-0`);
+        const row = tile ? tile.parentElement : null;
+        if (!row) return;
+        row.classList.add('shake');
+        row.addEventListener('animationend', () => row.classList.remove('shake'), { once: true });
+    }
+
     function showMessage(message) {
         const messageContainer = document.getElementById('message-container');
         messageContainer.textContent = message;

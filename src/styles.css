@@ -101,6 +101,19 @@ h1 {
     height: 420px;
 }
 
+/* The current row shakes when a guess is rejected - not enough letters or
+   not a real word - so the refusal is visible even with the message missed. */
+.tile-row.shake {
+  animation: rowShake 0.5s ease;
+}
+
+@keyframes rowShake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+
 .tile-row {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
