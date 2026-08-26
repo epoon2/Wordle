@@ -766,6 +766,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Used to scale the guess distribution bars
         const maxValue = Math.max(...Object.values(stats.guessDistribution));
+
+        // Average tries per win, derived from the distribution so it needs
+        // no new storage and stays right for stats saved before it existed.
+        const totalWins = Object.values(stats.guessDistribution).reduce((a, b) => a + b, 0);
+        const totalTries = Object.entries(stats.guessDistribution)
+            .reduce((a, [guesses, count]) => a + guesses * count, 0);
+        const avgTries = totalWins > 0 ? (totalTries / totalWins).toFixed(1) : '—';
         
         // Get the modal content for displaying result
         const modalContent = document.getElementById('stats-content');
@@ -827,6 +834,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="stat-item">
                     <div id="max-streak" class="stat-value">${stats.maxStreak}</div>
                     <div class="stat-label">Max Streak</div>
+                </div>
+                <div class="stat-item">
+                    <div id="avg-tries" class="stat-value">${avgTries}</div>
+                    <div class="stat-label">Avg Tries</div>
                 </div>
             </div>
             <h3>GUESS DISTRIBUTION</h3>
