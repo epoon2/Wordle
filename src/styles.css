@@ -736,11 +736,13 @@ h1 {
     }
 }
 
-/* Random-play tally in the stats modal: one quiet line, so the big daily
-   numbers stay the headline but a random game visibly counts somewhere. */
-.random-stats-line {
-  margin: 4px 0 12px;
+/* Per-mode sections in the stats modal. The daily block is the headline;
+   the other two carry a win-run streak, since unlimited modes cannot have
+   a calendar streak that means anything. */
+.dist-note {
+  margin-left: 6px;
   color: #818384;
-  font-size: 13px;
-  text-align: center;
+  font-size: 11px;
+  font-weight: normal;
+  text-transform: none;
 }
