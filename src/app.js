@@ -479,29 +479,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (guess.toUpperCase() === wordOfTheDay) {
             gameWon = true;
             
-            // Each mode keeps its own book. The daily streak is a
-            // calendar streak; previous and random are unlimited, so
-            // their streak is a run of consecutive wins.
-            if (gameMode === "daily") {
-                gameStats.daily.played++;
-                gameStats.daily.won++;
-                gameStats.guessDistribution[currentRow + 1]++;
-                const yesterdayStr = getDateForWordleNumber(getCurrentWordleNumber() - 1);
-                gameStats.daily.currentStreak = (gameStats.daily.lastWinDate === yesterdayStr)
-                    ? gameStats.daily.currentStreak + 1
-                    : 1;
-                gameStats.daily.lastWinDate = todayStr;
-                gameStats.daily.maxStreak = Math.max(gameStats.daily.maxStreak, gameStats.daily.currentStreak);
+            // Daily and previous share the puzzles book; the day streak
+            // still moves only on a daily win. Random keeps its own book
+            // and a consecutive-wins streak.
+            if (gameMode === "random") {
+                gameStats.random.played++;
+                gameStats.random.won++;
+                gameStats.random.distribution[currentRow + 1]++;
+                gameStats.random.currentStreak++;
+                gameStats.random.maxStreak = Math.max(gameStats.random.maxStreak, gameStats.random.currentStreak);
             } else {
-                const bucket = gameMode === "random" ? gameStats.random : gameStats.previous;
-                bucket.played++;
-                bucket.won++;
-                bucket.currentRun++;
-                bucket.bestRun = Math.max(bucket.bestRun, bucket.currentRun);
-                if (gameMode === "previous") {
-                    // Same puzzles as the daily, so wins land in the
-                    // shared guess distribution too
-                    gameStats.guessDistribution[currentRow + 1]++;
+                gameStats.puzzles.played++;
+                gameStats.puzzles.won++;
+                gameStats.puzzles.distribution[currentRow + 1]++;
+                if (gameMode === "daily") {
+                    const yesterdayStr = getDateForWordleNumber(getCurrentWordleNumber() - 1);
+                    gameStats.puzzles.dayStreak = (gameStats.puzzles.lastWinDate === yesterdayStr)
+                        ? gameStats.puzzles.dayStreak + 1
+                        : 1;
+                    gameStats.puzzles.lastWinDate = todayStr;
+                    gameStats.puzzles.maxStreak = Math.max(gameStats.puzzles.maxStreak, gameStats.puzzles.dayStreak);
                 }
             }
             saveStats(gameStats);
@@ -531,13 +528,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentRow >= 5) { // Check if this is the last row (index 5)
             gameWon = false;
             
-            if (gameMode === "daily") {
-                gameStats.daily.played++;
-                gameStats.daily.currentStreak = 0;
+            if (gameMode === "random") {
+                gameStats.random.played++;
+                gameStats.random.currentStreak = 0;
             } else {
-                const bucket = gameMode === "random" ? gameStats.random : gameStats.previous;
-                bucket.played++;
-                bucket.currentRun = 0;
+                gameStats.puzzles.played++;
+                if (gameMode === "daily") {
+                    gameStats.puzzles.dayStreak = 0;
+                }
             }
             saveStats(gameStats);
             
@@ -720,53 +718,62 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadStats() {
         const raw = localStorage.getItem('wordleStats');
         if (raw) {
-            const stats = JSON.parse(raw);
+            // let rather than const: v3 migration replaces the object wholesale
+            let stats = JSON.parse(raw);
             // Migrate stats saved by the old version, which stored the
             // distribution under the name "guesses"
             if (stats.guesses && !stats.guessDistribution) {
                 stats.guessDistribution = stats.guesses;
                 delete stats.guesses;
             }
-            // v2: per-mode buckets. Legacy played/won merged daily and
-            // previous games and cannot be unmixed, so the merged history
-            // lands under daily and the new buckets count from zero.
-            if (!stats.daily) {
-                stats.daily = {
+            // v3: two books. Daily and previous are the same puzzles,
+            // so they share one bucket, one distribution, and one average;
+            // the day streak inside it still moves only on daily wins.
+            // Random is unlimited, so it keeps its own distribution and a
+            // consecutive-wins streak. Older shapes are folded forward:
+            // legacy saves merged daily and previous already, which is
+            // exactly what the puzzles bucket is.
+            if (!stats.puzzles) {
+                const dist = stats.guessDistribution || {1:0,2:0,3:0,4:0,5:0,6:0};
+                const daily = stats.daily || {
                     played: stats.gamesPlayed || 0,
                     won: stats.gamesWon || 0,
                     currentStreak: stats.currentStreak || 0,
                     maxStreak: stats.maxStreak || 0,
                     lastWinDate: stats.lastWinDate || null
                 };
-                stats.previous = { played: 0, won: 0, currentRun: 0, bestRun: 0 };
-                stats.random = {
-                    played: (stats.random && stats.random.gamesPlayed) || 0,
-                    won: (stats.random && stats.random.gamesWon) || 0,
-                    currentRun: 0,
-                    bestRun: 0
+                const prev = stats.previous || { played: 0, won: 0 };
+                const rand = stats.random || {};
+                stats = {
+                    puzzles: {
+                        played: daily.played + (prev.played || 0),
+                        won: daily.won + (prev.won || 0),
+                        dayStreak: daily.currentStreak || 0,
+                        maxStreak: daily.maxStreak || 0,
+                        lastWinDate: daily.lastWinDate || null,
+                        distribution: dist
+                    },
+                    random: {
+                        played: rand.played ?? rand.gamesPlayed ?? 0,
+                        won: rand.won ?? rand.gamesWon ?? 0,
+                        currentStreak: rand.currentRun || 0,
+                        maxStreak: rand.bestRun || 0,
+                        distribution: {1:0,2:0,3:0,4:0,5:0,6:0}
+                    }
                 };
-                delete stats.gamesPlayed;
-                delete stats.gamesWon;
-                delete stats.currentStreak;
-                delete stats.maxStreak;
-                delete stats.lastWinDate;
-                // Write the migrated shape back immediately, so a save
-                // from any later code path never mixes the two formats
                 saveStats(stats);
             }
             return stats;
         }
         // Default stats object
-        // Per-mode buckets. The daily streak is a calendar streak - it
-        // only continues when consecutive days are won on their day. The
-        // other modes are unlimited, so their streak is a win run:
-        // consecutive wins with no loss between. The guess distribution
-        // is shared by daily and previous, which are the same puzzles.
+        // Two books: puzzles (daily + previous, the same words) and
+        // random. Each has its own distribution, so each has its own
+        // average. The day streak moves only on daily wins.
         return {
-            daily: { played: 0, won: 0, currentStreak: 0, maxStreak: 0, lastWinDate: null },
-            previous: { played: 0, won: 0, currentRun: 0, bestRun: 0 },
-            random: { played: 0, won: 0, currentRun: 0, bestRun: 0 },
-            guessDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+            puzzles: { played: 0, won: 0, dayStreak: 0, maxStreak: 0, lastWinDate: null,
+                       distribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0} },
+            random: { played: 0, won: 0, currentStreak: 0, maxStreak: 0,
+                      distribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0} }
         };
     }
     
@@ -784,13 +791,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // The stats shown are the same object the game updates
         const stats = gameStats;
         
-        // Used to scale the guess distribution bars
-        const maxValue = Math.max(...Object.values(stats.guessDistribution));
+        // Only the book for the mode being played: puzzles for daily and
+        // previous (the same words), random for random. Each book carries
+        // its own distribution, so the average is per-book too.
+        const inRandom = gameMode === 'random';
+        const book = inRandom ? stats.random : stats.puzzles;
 
-        // Average tries per win, derived from the distribution so it needs
-        // no new storage and stays right for stats saved before it existed.
-        const totalWins = Object.values(stats.guessDistribution).reduce((a, b) => a + b, 0);
-        const totalTries = Object.entries(stats.guessDistribution)
+        const maxValue = Math.max(...Object.values(book.distribution));
+        const totalWins = Object.values(book.distribution).reduce((a, b) => a + b, 0);
+        const totalTries = Object.entries(book.distribution)
             .reduce((a, [guesses, count]) => a + guesses * count, 0);
         const avgTries = totalWins > 0 ? (totalTries / totalWins).toFixed(1) : '—';
         
@@ -837,22 +846,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>STATISTICS</h2>
                 <button id="stats-close" class="close-button">×</button>
             </div>
-            <h3>DAILY</h3>
+            <h3>${inRandom ? 'RANDOM' : 'DAILY & PREVIOUS'}</h3>
             <div class="stats-numbers">
                 <div class="stat-item">
-                    <div id="games-played" class="stat-value">${stats.daily.played}</div>
+                    <div id="games-played" class="stat-value">${book.played}</div>
                     <div class="stat-label">Played</div>
                 </div>
                 <div class="stat-item">
-                    <div id="win-percentage" class="stat-value">${Math.round((stats.daily.won / Math.max(stats.daily.played, 1)) * 100)}</div>
+                    <div id="win-percentage" class="stat-value">${Math.round((book.won / Math.max(book.played, 1)) * 100)}</div>
                     <div class="stat-label">Win %</div>
                 </div>
                 <div class="stat-item">
-                    <div id="current-streak" class="stat-value">${stats.daily.currentStreak}</div>
-                    <div class="stat-label">Day Streak</div>
+                    <div id="current-streak" class="stat-value">${inRandom ? book.currentStreak : book.dayStreak}</div>
+                    <div class="stat-label">${inRandom ? 'Current Streak' : 'Day Streak'}</div>
                 </div>
                 <div class="stat-item">
-                    <div id="max-streak" class="stat-value">${stats.daily.maxStreak}</div>
+                    <div id="max-streak" class="stat-value">${book.maxStreak}</div>
                     <div class="stat-label">Max Streak</div>
                 </div>
                 <div class="stat-item">
@@ -860,48 +869,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="stat-label">Avg Tries</div>
                 </div>
             </div>
-            <h3>PREVIOUS PUZZLES</h3>
-            <div class="stats-numbers">
-                <div class="stat-item">
-                    <div id="prev-played" class="stat-value">${stats.previous.played}</div>
-                    <div class="stat-label">Played</div>
-                </div>
-                <div class="stat-item">
-                    <div id="prev-win" class="stat-value">${Math.round((stats.previous.won / Math.max(stats.previous.played, 1)) * 100)}</div>
-                    <div class="stat-label">Win %</div>
-                </div>
-                <div class="stat-item">
-                    <div id="prev-run" class="stat-value">${stats.previous.currentRun}</div>
-                    <div class="stat-label">Win Run</div>
-                </div>
-                <div class="stat-item">
-                    <div id="prev-best" class="stat-value">${stats.previous.bestRun}</div>
-                    <div class="stat-label">Best Run</div>
-                </div>
-            </div>
-            <h3>RANDOM</h3>
-            <div class="stats-numbers">
-                <div class="stat-item">
-                    <div id="rand-played" class="stat-value">${stats.random.played}</div>
-                    <div class="stat-label">Played</div>
-                </div>
-                <div class="stat-item">
-                    <div id="rand-win" class="stat-value">${Math.round((stats.random.won / Math.max(stats.random.played, 1)) * 100)}</div>
-                    <div class="stat-label">Win %</div>
-                </div>
-                <div class="stat-item">
-                    <div id="rand-run" class="stat-value">${stats.random.currentRun}</div>
-                    <div class="stat-label">Win Run</div>
-                </div>
-                <div class="stat-item">
-                    <div id="rand-best" class="stat-value">${stats.random.bestRun}</div>
-                    <div class="stat-label">Best Run</div>
-                </div>
-            </div>
-            <h3>GUESS DISTRIBUTION <span class="dist-note">daily + previous</span></h3>
+            <h3>GUESS DISTRIBUTION</h3>
             <div class="guess-distribution">
                 ${Array.from({ length: 6 }, (_, i) => {
-                    const count = stats.guessDistribution[i + 1] || 0;
+                    const count = book.distribution[i + 1] || 0;
                     const width = maxValue > 0 ? (count / maxValue) * 100 : 0;
                     return `
                         <div class="guess-row">

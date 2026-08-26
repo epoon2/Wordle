@@ -736,13 +736,4 @@ h1 {
     }
 }
 
-/* Per-mode sections in the stats modal. The daily block is the headline;
-   the other two carry a win-run streak, since unlimited modes cannot have
-   a calendar streak that means anything. */
-.dist-note {
-  margin-left: 6px;
-  color: #818384;
-  font-size: 11px;
-  font-weight: normal;
-  text-transform: none;
-}
+
