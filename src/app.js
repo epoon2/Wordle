@@ -479,8 +479,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (guess.toUpperCase() === wordOfTheDay) {
             gameWon = true;
             
-            // Random games don't count toward stats
-            if (gameMode !== "random") {
+            // Random games keep their own tally so the daily streak and
+            // guess distribution stay honest, but a random win is still
+            // recorded somewhere the player can see it move.
+            if (gameMode === "random") {
+                gameStats.random.gamesPlayed++;
+                gameStats.random.gamesWon++;
+                saveStats(gameStats);
+            } else {
                 gameStats.gamesPlayed++;
                 gameStats.gamesWon++;
                 
@@ -526,8 +532,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentRow >= 5) { // Check if this is the last row (index 5)
             gameWon = false;
             
-            // Random games don't count toward stats
-            if (gameMode !== "random") {
+            if (gameMode === "random") {
+                gameStats.random.gamesPlayed++;
+                saveStats(gameStats);
+            } else {
                 gameStats.gamesPlayed++;
                 
                 // A lost daily breaks the streak
@@ -724,6 +732,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 stats.guessDistribution = stats.guesses;
                 delete stats.guesses;
             }
+            // Older saves predate the random-play tally
+            if (!stats.random) {
+                stats.random = { gamesPlayed: 0, gamesWon: 0 };
+            }
             return stats;
         }
         // Default stats object
@@ -733,7 +745,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentStreak: 0,
             maxStreak: 0,
             lastWinDate: null,
-            guessDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+            guessDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0},
+            random: { gamesPlayed: 0, gamesWon: 0 }
         };
     }
     
@@ -797,6 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h2>STATISTICS</h2>
                 <button id="stats-close" class="close-button">×</button>
             </div>
+            <h3>DAILY & PREVIOUS PUZZLES</h3>
             <div class="stats-numbers">
                 <div class="stat-item">
                     <div id="games-played" class="stat-value">${stats.gamesPlayed}</div>
@@ -832,6 +846,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }).join('')}
             </div>
+            <h3>RANDOM PLAY</h3>
+            <p class="random-stats-line">
+                Played ${stats.random.gamesPlayed} ·
+                Won ${stats.random.gamesWon}
+                (${Math.round((stats.random.gamesWon / Math.max(stats.random.gamesPlayed, 1)) * 100)}%)
+                — random games don't affect streaks or the distribution
+            </p>
             
             ${isGameOver ? `<div class="game-result">
                 <p>${modeText} ${wordOfTheDay}</p>

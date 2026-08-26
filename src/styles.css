@@ -735,3 +735,12 @@ h1 {
         flex-direction: column;
     }
 }
+
+/* Random-play tally in the stats modal: one quiet line, so the big daily
+   numbers stay the headline but a random game visibly counts somewhere. */
+.random-stats-line {
+  margin: 4px 0 12px;
+  color: #818384;
+  font-size: 13px;
+  text-align: center;
+}
